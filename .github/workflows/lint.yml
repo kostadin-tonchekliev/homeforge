@@ -1,0 +1,71 @@
+---
+name: Lint
+
+on:
+  pull_request:
+
+jobs:
+  ansible-lint:
+    name: ansible-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install --quiet -r requirements.txt
+
+      - name: Run ansible-lint
+        run: ansible-lint
+
+  yamllint:
+    name: yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install --quiet -r requirements.txt
+
+      - name: Run yamllint
+        run: yamllint -c .yamllint.yml .
+
+  syntax-check:
+    name: syntax-check
+    runs-on: ubuntu-latest
+    env:
+      # Explicitly set roles path because ansible.cfg is ignored in
+      # world-writable CI directories.
+      ANSIBLE_ROLES_PATH: ${{ github.workspace }}/roles
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install --quiet -r requirements.txt
+
+      - name: Run syntax check
+        run: |
+          for playbook in playbooks/*.yml; do
+            echo "Checking syntax: $playbook"
+            ansible-playbook --syntax-check "$playbook" -i inventory/dev.yml
+          done

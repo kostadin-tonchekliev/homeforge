@@ -1,0 +1,6 @@
+---
+- name: Run the initial setup for the homeserver
+  hosts: all
+  roles:
+    - common
+    - docker

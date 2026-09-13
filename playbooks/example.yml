@@ -1,0 +1,5 @@
+---
+- name: Example playbook
+  hosts: all
+  roles:
+    - example

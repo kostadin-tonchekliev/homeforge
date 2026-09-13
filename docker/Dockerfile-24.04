@@ -1,0 +1,20 @@
+FROM geerlingguy/docker-ubuntu2404-ansible:latest
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssh-server sudo \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /var/run/sshd
+
+RUN useradd -m -s /bin/bash ansible \
+    && echo "ansible ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ansible \
+    && chmod 440 /etc/sudoers.d/ansible \
+    && mkdir -p /home/ansible/.ssh \
+    && chmod 700 /home/ansible/.ssh
+
+COPY ssh_keys/ansible_test.pub /home/ansible/.ssh/authorized_keys
+
+RUN chown -R ansible:ansible /home/ansible/.ssh \
+    && chmod 600 /home/ansible/.ssh/authorized_keys \
+    && systemctl enable ssh
+
+EXPOSE 22

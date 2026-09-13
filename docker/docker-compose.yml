@@ -1,0 +1,31 @@
+services:
+  test-ubuntu-noble:
+    build:
+      context: .
+      dockerfile: Dockerfile-24.04
+    container_name: ansible-test-ubuntu-noble
+    hostname: test-ubuntu-noble
+    privileged: true
+    cgroup: host
+    tmpfs:
+      - /run
+      - /run/lock
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    ports:
+      - "2222:22"
+  test-ubuntu-resolute:
+    build:
+      context: .
+      dockerfile: Dockerfile-26.04
+    container_name: ansible-test-ubuntu-resolute
+    hostname: test-ubuntu-resolute
+    privileged: true
+    cgroup: host
+    tmpfs:
+      - /run
+      - /run/lock
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    ports:
+      - "2223:22"

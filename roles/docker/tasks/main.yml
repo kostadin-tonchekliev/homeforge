@@ -1,0 +1,4 @@
+---
+- name: Install Docker
+  ansible.builtin.debug:
+    msg: "Installing docker "
