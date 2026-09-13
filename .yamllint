@@ -1,0 +1,31 @@
+extends: default
+
+ignore:
+  - /.git
+  - /.github
+  - /.venv/
+  - /docker
+  - /.yamllint
+  - /.ansible-lint
+
+rules:
+  # Line length
+  line-length:
+    max: 120
+    level: warning
+
+  # Indentation (2 spaces is standard for Ansible)
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Required for ansible-lint compatibility
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: false
+  braces:
+    max-spaces-inside: 1
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true

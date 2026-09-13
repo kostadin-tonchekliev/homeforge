@@ -50,6 +50,13 @@ if [ -f "$host_vars_file" ] && grep -q '^ansible_ssh_private_key_file:' "$host_v
   sed -i.bak "s|^ansible_ssh_private_key_file:.*|ansible_ssh_private_key_file: ${key_path}|" "$host_vars_file"
   rm -f "${host_vars_file}.bak"
 else
+  # Ensure file starts with YAML document start
+  if [ ! -f "$host_vars_file" ]; then
+    echo "---" > "$host_vars_file"
+  elif ! head -1 "$host_vars_file" | grep -q '^---'; then
+    # Prepend --- if not already there
+    (echo "---"; cat "$host_vars_file") > "${host_vars_file}.tmp" && mv "${host_vars_file}.tmp" "$host_vars_file"
+  fi
   echo "ansible_ssh_private_key_file: ${key_path}" >> "$host_vars_file"
 fi
 

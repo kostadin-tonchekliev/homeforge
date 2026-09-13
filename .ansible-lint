@@ -1,0 +1,11 @@
+# Ansible-lint configuration file
+# Reference: https://docs.ansible.com/projects/lint/
+
+# Specify paths to exclude from linting
+exclude_paths:
+  - .git
+  - .github
+  - .venv
+  - docker
+  - .yamllint
+  - .ansible-lint
