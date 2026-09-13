@@ -9,7 +9,7 @@ A local Docker sandbox (`docker/`) runs disposable Ubuntu 24.04 and Ubuntu 26.04
 ```
 .
 ├── .ansible-lint                  # ansible-lint rule configuration
-├── .yamllint.yml                  # yamllint configuration
+├── .yamllint                      # yamllint configuration
 ├── ansible.cfg                    # points ansible-playbook at the test inventory by default
 ├── requirements.txt               # pinned ansible-core version (installed into .venv)
 ├── setup.sh                       # one-time local setup (venv, requirements, SSH keys) — see below
@@ -72,15 +72,20 @@ Expected output:
 PLAY [Example playbook] ****************************************************************************************************************************************************************************************
 
 TASK [Gathering Facts] *****************************************************************************************************************************************************************************************
-ok: [test-ubuntu]
+ok: [test-ubuntu-noble]
+ok: [test-ubuntu-resolute]
 
 TASK [example : Print welcome message] *************************************************************************************************************************************************************************
-ok: [test-ubuntu] => {
+ok: [test-ubuntu-noble] => {
+    "msg": "Hello from the homeserver Ansible project!"
+}
+ok: [test-ubuntu-resolute] => {
     "msg": "Hello from the homeserver Ansible project!"
 }
 
 PLAY RECAP *****************************************************************************************************************************************************************************************************
-test-ubuntu                : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+test-ubuntu-noble          : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+test-ubuntu-resolute       : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 ```
 
 Tear the sandbox down when you're done:

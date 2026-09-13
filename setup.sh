@@ -24,6 +24,7 @@ if [ -f docker/ssh_keys/ansible_test ]; then
 else
   ssh-keygen -t ed25519 -f docker/ssh_keys/ansible_test -N ""
 fi
+chmod 400 docker/ssh_keys/ansible_test
 
 echo "==> Configuring ansible_ssh_private_key_file for bigboy"
 host_vars_file="inventory/host_vars/bigboy.yml"
