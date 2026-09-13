@@ -103,6 +103,21 @@ Run any playbook with the production inventory explicitly:
    Production is never used by accident — `ansible.cfg` defaults to the test inventory,
    so you must pass `-i inventory/production.yml` explicitly to target the real box.
 
+## Branch naming conventions
+
+Branch names follow this pattern: `<type>/<short-description>`, using kebab-case for the description.
+
+| Type | Use case | Example |
+|---|---|---|
+| `feature/` | New features or functionality | `feature/docker-sandbox-setup` |
+| `bugfix/` | Bug fixes in non-production code | `bugfix/fix-ansible-lint-errors` |
+| `chore/` | Maintenance, dependencies, configuration | `chore/update-requirements` |
+| `refactor/` | Code refactoring without feature changes | `refactor/simplify-role-structure` |
+| `docs/` | Documentation-only changes | `docs/add-deployment-guide` |
+| `test/` | Testing changes | `test/rename-role` |
+
+Always branch from `main` and open a pull request before merging. The branch name should be descriptive enough to understand the change at a glance.
+
 ## CI / Linting
 
 Three lint jobs run automatically on every merge/pull request:
