@@ -1,4 +1,4 @@
 ---
-- name: Print welcome message
+- name: main | Print welcome message
   ansible.builtin.debug:
     msg: "{{ example_welcome_message }}"

@@ -1,3 +1,5 @@
+---
+name: homeforge-test-boxes
 services:
   test-ubuntu-noble:
     build:

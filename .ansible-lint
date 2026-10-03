@@ -1,7 +1,13 @@
+---
 # Ansible-lint configuration file
 # Reference: https://docs.ansible.com/projects/lint/
 
-# Specify paths to exclude from linting
+skip_list:
+  - name[casing]
+
+warn_list:
+  - risky-file-permissions
+
 exclude_paths:
   - .git
   - .github
