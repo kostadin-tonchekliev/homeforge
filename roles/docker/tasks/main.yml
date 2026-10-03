@@ -1,4 +1,3 @@
 ---
-- name: Install Docker
-  ansible.builtin.debug:
-    msg: "Installing docker "
+- name: main | Run the initial setup
+  include_tasks: setup.yml
