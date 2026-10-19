@@ -1,0 +1,31 @@
+---
+# Rules are added in this order, and ufw evaluates them top to bottom: the host-only
+# DENY has to come before the LAN ALLOW. Docker-published ports bypass ufw entirely,
+# so services that must stay private don't publish ports in their compose file instead.
+firewall_rules:
+  - rule: allow
+    port: "22"
+    proto: tcp
+    comment: SSH
+  - rule: allow
+    from_ip: 10.40.0.0/24
+    comment: Docker proxy network (Caddy, Homepage, Uptime Kuma)
+  - rule: allow
+    from_ip: 172.16.0.0/12
+    comment: Docker bridge networks
+  - rule: allow
+    from_ip: 192.168.48.0/20
+    comment: Docker bridge networks
+  - rule: allow
+    from_ip: 192.168.64.0/20
+    comment: Docker bridge networks
+  - rule: deny
+    port: 3000,3010,8123,9090,9100
+    proto: tcp
+    comment: "Host-only: Grafana, ntopng, HA, Prometheus, node_exporter (use Caddy)"
+  - rule: allow
+    from_ip: "{{ homeserver_lan_subnet }}"
+    comment: "LAN: Jellyfin, HA, discovery, etc."
+  - rule: allow
+    from_ip: fe80::/10
+    comment: IPv6 link-local discovery

@@ -1,0 +1,24 @@
+---
+- name: config | Write the Docker daemon config
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart docker
+
+- name: config | Let the server user run docker without sudo
+  ansible.builtin.user:
+    name: "{{ homeserver_user }}"
+    groups: docker
+    append: true
+
+# The community.docker modules talk to the Docker API through python-requests
+- name: config | Install the Python libraries used by the community.docker modules
+  ansible.builtin.apt:
+    name: python3-requests
+    state: present
+
+- name: config | Apply a changed daemon config before creating networks
+  ansible.builtin.meta: flush_handlers

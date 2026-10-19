@@ -155,4 +155,5 @@ ansible-playbook --syntax-check playbooks/*.yml -i inventory/dev.yml
 
 ## Playbooks
 
-- [setup.yml](playbooks/setup.yml) - Setup all services
+- [setup.yml](playbooks/setup.yml) - Set up everything (imports the playbooks below). Every role is tagged with its own name, e.g. `--tags firewall`
+- [base.yml](playbooks/base.yml) - Base host: packages, timezone, users and the `media` group, `/media` (data disk mount in prod), ufw, Docker with its daemon config and shared networks

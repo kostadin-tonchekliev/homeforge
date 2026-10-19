@@ -1,2 +1,7 @@
 ---
 # Real mini PC overrides. Secrets are referenced from vault.yml as vault_* variables.
+
+homeserver_lan_ip: 192.168.1.113
+
+# 1.8 TB NVMe data disk, mounted at /media
+common_media_disk_uuid: 4e566a00-bc54-47c8-bb1c-4993d4e8ed6b

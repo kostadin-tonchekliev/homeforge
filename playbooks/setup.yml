@@ -1,6 +1,5 @@
 ---
-- name: Run the initial setup for the homeserver
-  hosts: all
-  roles:
-    - common
-    - docker
+# Full setup of the home server. Every role is tagged with its own name:
+#   ansible-playbook playbooks/setup.yml --tags caddy
+- name: Base host setup
+  ansible.builtin.import_playbook: base.yml

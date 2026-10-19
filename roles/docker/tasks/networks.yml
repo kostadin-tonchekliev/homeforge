@@ -1,0 +1,12 @@
+---
+- name: networks | Create the shared networks
+  community.docker.docker_network:
+    name: "{{ item.name }}"
+    internal: "{{ item.internal }}"
+    ipam_config:
+      - subnet: "{{ item.subnet }}"
+        gateway: "{{ item.gateway }}"
+        iprange: "{{ item.iprange | default(omit) }}"
+  loop: "{{ docker_networks }}"
+  loop_control:
+    label: "{{ item.name }}"

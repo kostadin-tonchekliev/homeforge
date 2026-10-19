@@ -1,0 +1,10 @@
+---
+- name: Base host setup (packages, users, /media, firewall, Docker)
+  hosts: homeserver
+  roles:
+    - role: common
+      tags: [common]
+    - role: firewall
+      tags: [firewall]
+    - role: docker
+      tags: [docker]

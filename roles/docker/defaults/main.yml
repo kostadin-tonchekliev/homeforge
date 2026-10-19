@@ -1,0 +1,27 @@
+---
+# DNS for containers: Pi-hole on the host first (so *.home.<domain> resolves), public fallback
+docker_daemon_config:
+  dns:
+    - "{{ homeserver_lan_ip }}"
+    - 1.1.1.1
+
+# Shared networks that the compose stacks join as `external: true`.
+# Don't use 172.32+ ranges for new ones: they aren't private address space.
+docker_networks:
+  # Everything Caddy reverse-proxies. Caddy is pinned at .2 (the trusted proxy IP for
+  # Jellyfin, GitLab and HA), so dynamic addresses come from the upper half only.
+  - name: proxy
+    subnet: 10.40.0.0/24
+    iprange: 10.40.0.128/25
+    gateway: 10.40.0.1
+    internal: false
+  # Apps that use the shared PostgreSQL server; no route out
+  - name: db
+    subnet: 10.41.0.0/24
+    gateway: 10.41.0.1
+    internal: true
+  # Deluge, Flaresolverr and the *arr apps
+  - name: arr_network
+    subnet: 172.22.0.0/16
+    gateway: 172.22.0.1
+    internal: false

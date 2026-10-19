@@ -1,2 +1,5 @@
 ---
 # Docker sandbox overrides. Secrets here are throwaway dummy values in plain text.
+
+# The sandbox image's sudo user (there is no chonk in the sandbox)
+homeserver_user: ansible
