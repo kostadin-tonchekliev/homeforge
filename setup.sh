@@ -6,11 +6,42 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# Python versions the pinned ansible-core (requirements.txt) supports as a controller.
+# Newer Pythons break it (e.g. 3.15: "module 'dataclasses' has no attribute '_is_type'").
+supported_pythons=(3.14 3.13 3.12)
+
+is_supported() {
+  local version
+  version=$("$1" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null) || return 1
+  [[ " ${supported_pythons[*]} " == *" ${version} "* ]]
+}
+
 echo "==> Setting up virtual environment (.venv)"
+if [ -d .venv ] && ! is_supported .venv/bin/python; then
+  echo "    .venv uses an unsupported Python ($(.venv/bin/python --version 2>&1)), recreating it"
+  rm -rf .venv
+fi
+
 if [ -d .venv ]; then
   echo "    .venv already exists, skipping creation"
 else
-  python3 -m venv .venv
+  # $PYTHON overrides the choice; otherwise use the newest supported python3.X on the PATH
+  python="${PYTHON:-}"
+  if [ -z "$python" ]; then
+    for version in "${supported_pythons[@]}" ""; do
+      if command -v "python${version:-3}" >/dev/null && is_supported "python${version:-3}"; then
+        python="python${version:-3}"
+        break
+      fi
+    done
+  fi
+  if [ -z "$python" ] || ! is_supported "$python"; then
+    echo "No supported Python found: ansible-core needs Python ${supported_pythons[*]}." >&2
+    echo "Install one (e.g. 'brew install python@3.13') or point PYTHON at it: PYTHON=/path/to/python3.13 ./setup.sh" >&2
+    exit 1
+  fi
+  echo "    using $("$python" --version) ($(command -v "$python"))"
+  "$python" -m venv .venv
 fi
 source .venv/bin/activate
 

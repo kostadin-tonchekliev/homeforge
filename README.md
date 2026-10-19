@@ -39,7 +39,7 @@ disks, devices…) are variables, never `when: env == ...` branches.
 
 ## Prerequisites
 
-- Python 3
+- Python 3.12, 3.13 or 3.14 (what the pinned ansible-core supports; `setup.sh` picks one, or set `PYTHON=`)
 - Docker + the Docker Compose plugin
 - SSH client (`ssh-keygen`)
 
