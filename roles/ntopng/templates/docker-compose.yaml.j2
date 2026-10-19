@@ -1,0 +1,18 @@
+---
+services:
+  ntopng:
+    image: {{ ntopng_image }}
+    container_name: ntopng
+    # Host networking so ntopng sees the real NIC traffic (who connects to the server)
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - TZ={{ homeserver_timezone }}
+    # Web UI on 3010 (3000 is Grafana); reached via https://ntopng.home.tonchekliev.info
+    command: ["-i", "{{ ntopng_interface }}", "-w", "3010", "--local-networks", "{{ homeserver_lan_subnet }}", "--community"]
+    volumes:
+      - /opt/ntopng/data:/var/lib/ntopng
+      - /opt/ntopng/redis:/var/lib/redis
+    restart: unless-stopped

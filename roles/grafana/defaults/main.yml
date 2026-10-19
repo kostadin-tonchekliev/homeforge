@@ -1,0 +1,14 @@
+---
+grafana_db_password: ""
+
+# Non-default grafana.ini settings; everything else stays as packaged
+grafana_ini:
+  - { section: server, option: domain, value: "grafana.{{ homeserver_domain }}" }
+  - { section: server, option: root_url, value: "https://grafana.{{ homeserver_domain }}/" }
+  - { section: database, option: type, value: postgres }
+  - { section: database, option: host, value: "127.0.0.1:5432" }
+  - { section: database, option: name, value: grafana }
+  - { section: database, option: user, value: grafana }
+  - { section: database, option: password, value: "{{ grafana_db_password }}" }
+  - { section: database, option: high_availability, value: "false" }
+  - { section: database, option: ssl_mode, value: disable }

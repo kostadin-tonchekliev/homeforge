@@ -16,3 +16,7 @@ postgres_app_passwords: "{{ vault_postgres_app_passwords }}"
 # Intel UHD 630: OpenCL for HDR tone mapping
 jellyfin_extra_packages:
   - intel-opencl-icd
+
+grafana_db_password: "{{ vault_postgres_app_passwords['grafana'] }}"
+
+ntopng_interface: eno1

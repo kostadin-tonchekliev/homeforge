@@ -9,3 +9,6 @@
 
 - name: Media
   ansible.builtin.import_playbook: media.yml
+
+- name: Monitoring
+  ansible.builtin.import_playbook: monitoring.yml

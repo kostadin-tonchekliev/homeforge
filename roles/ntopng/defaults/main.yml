@@ -1,0 +1,9 @@
+---
+# Network interface to monitor
+ntopng_interface: "{{ ansible_facts['default_ipv4']['interface'] }}"
+
+# ntop only publishes multi-arch builds under a separate name for arm64
+ntopng_images:
+  x86_64: ntop/ntopng:latest
+  aarch64: ntop/ntopng_arm64.dev:latest
+ntopng_image: "{{ ntopng_images[ansible_facts['architecture']] }}"

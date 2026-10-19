@@ -21,3 +21,5 @@ postgres_app_passwords:
   prowlarr: dev-prowlarr
   radarr: dev-radarr
   sonarr: dev-sonarr
+
+grafana_db_password: dev-grafana

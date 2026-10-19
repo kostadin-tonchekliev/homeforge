@@ -1,0 +1,8 @@
+---
+- name: main | Deploy the Uptime Kuma stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: uptime-kuma
+    compose_app_dirs:
+      - path: data
