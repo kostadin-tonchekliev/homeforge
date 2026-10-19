@@ -49,7 +49,17 @@ echo "==> Installing requirements"
 pip install -r requirements.txt
 
 echo "==> Installing Ansible collections (requirements.yml)"
-ansible-galaxy collection install -r requirements.yml
+# Galaxy downloads time out now and then; already-installed collections are skipped on retry
+for attempt in 1 2 3; do
+  if ansible-galaxy collection install -r requirements.yml --timeout 180; then
+    break
+  elif [ "$attempt" -eq 3 ]; then
+    echo "Installing the collections failed 3 times; check your connection and re-run ./setup.sh" >&2
+    exit 1
+  fi
+  echo "    attempt $attempt failed, retrying in 10s"
+  sleep 10
+done
 
 echo "==> Generating sandbox SSH keypair (docker/ssh_keys/ansible_test)"
 mkdir -p docker/ssh_keys
