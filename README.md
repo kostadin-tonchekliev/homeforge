@@ -117,6 +117,31 @@ Edit the secrets with:
 ansible-vault edit inventory/group_vars/prod/vault.yml --vault-password-file .vault_pass
 ```
 
+## Adding a Docker Compose service
+
+Every stack lives in `/opt/<name>` and is deployed by the shared `compose_app` role. A
+service role is usually just a `templates/docker-compose.yaml.j2` plus a `tasks/main.yml`:
+
+```yaml
+- name: main | Deploy the Kavita stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: kavita
+    compose_app_dirs:           # created if missing, never chowned recursively
+      - path: config
+    compose_app_env:            # written to /opt/kavita/.env (0600), for ${VAR} in the compose file
+      SOME_SECRET: "{{ kavita_some_secret }}"
+    compose_app_templates:      # extra config files from this role's templates/
+      - src: app.conf.j2
+        dest: config/app.conf
+```
+
+`compose_app` looks the compose template and config files up in the calling role. When a
+config file changes but compose doesn't recreate the containers, it restarts the stack
+(or runs `compose_app_reload_command`, like Caddy's graceful reload). If the service is
+reachable over HTTPS, add it to `homelab_services` and to a section in `caddy_sections`.
+
 ## Branch naming conventions
 
 Branch names follow this pattern: `<type>/<short-description>`, using kebab-case for the description.
@@ -156,4 +181,5 @@ ansible-playbook --syntax-check playbooks/*.yml -i inventory/dev.yml
 ## Playbooks
 
 - [setup.yml](playbooks/setup.yml) - Set up everything (imports the playbooks below). Every role is tagged with its own name, e.g. `--tags firewall`
+- [core.yml](playbooks/core.yml) - Core services: Caddy (reverse proxy + TLS, routes generated from `inventory/group_vars/homeserver/services.yml`), Pi-hole (LAN DNS + the `*.home` wildcard), PostgreSQL (shared server, one login + database per app)
 - [base.yml](playbooks/base.yml) - Base host: packages, timezone, users and the `media` group, `/media` (data disk mount in prod), ufw, Docker with its daemon config and shared networks

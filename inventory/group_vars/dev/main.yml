@@ -3,3 +3,21 @@
 
 # The sandbox image's sudo user (there is no chonk in the sandbox)
 homeserver_user: ansible
+
+# No public DNS for the sandbox: Caddy signs certificates with its own local CA
+caddy_tls_mode: internal
+caddy_cf_api_token: dev-not-used
+
+pihole_password: dev-pihole
+
+postgres_password: dev-postgres
+postgres_exporter_password: dev-exporter
+postgres_app_passwords:
+  gitlab: dev-gitlab
+  grafana: dev-grafana
+  homeassistant: dev-homeassistant
+  jellystat: dev-jellystat
+  openwebui: dev-openwebui
+  prowlarr: dev-prowlarr
+  radarr: dev-radarr
+  sonarr: dev-sonarr

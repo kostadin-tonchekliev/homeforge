@@ -5,3 +5,10 @@ homeserver_lan_ip: 192.168.1.113
 
 # 1.8 TB NVMe data disk, mounted at /media
 common_media_disk_uuid: 4e566a00-bc54-47c8-bb1c-4993d4e8ed6b
+
+caddy_cf_api_token: "{{ vault_caddy_cf_api_token }}"
+pihole_password: "{{ vault_pihole_password }}"
+
+postgres_password: "{{ vault_postgres_password }}"
+postgres_exporter_password: "{{ vault_postgres_exporter_password }}"
+postgres_app_passwords: "{{ vault_postgres_app_passwords }}"

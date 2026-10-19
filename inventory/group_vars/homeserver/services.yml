@@ -1,0 +1,74 @@
+---
+# Registry of the web services behind Caddy, keyed by service id. The Caddyfile
+# (roles/caddy) and the Homepage dashboard (roles/homepage) are both generated from it;
+# each of those roles decides the order and grouping in its own defaults.
+#
+#   subdomain         https://<subdomain>.<homeserver_domain>; "" means the bare domain
+#   upstream          where Caddy proxies to: <container>:<port> on the proxy network,
+#                     or host.docker.internal:<port> for services running on the host
+#   caddy_matcher     name of the Caddy matcher (default: the subdomain)
+#   caddy_directives  extra Caddy directives placed before reverse_proxy
+homelab_services:
+  homepage:
+    subdomain: ""
+    caddy_matcher: home
+    upstream: homepage:3000
+  jellyfin:
+    subdomain: jellyfin
+    upstream: host.docker.internal:8096
+  jellystat:
+    subdomain: jellystat
+    upstream: jellystat:3000
+  audiobookshelf:
+    subdomain: abs
+    upstream: audiobookshelf:80
+  kavita:
+    subdomain: kavita
+    upstream: kavita:5000
+  sonarr:
+    subdomain: sonarr
+    upstream: sonarr:8989
+  radarr:
+    subdomain: radarr
+    upstream: radarr:7878
+  prowlarr:
+    subdomain: prowlarr
+    upstream: prowlarr:9696
+  deluge:
+    subdomain: deluge
+    upstream: deluge:8112
+  grafana:
+    subdomain: grafana
+    upstream: host.docker.internal:3000
+  prometheus:
+    subdomain: prometheus
+    upstream: host.docker.internal:9090
+  cadvisor:
+    subdomain: cadvisor
+    upstream: cadvisor:8080
+  uptime_kuma:
+    subdomain: uptime
+    upstream: uptime-kuma:3001
+  ntopng:
+    subdomain: ntopng
+    upstream: host.docker.internal:3010
+  home_assistant:
+    subdomain: ha
+    upstream: host.docker.internal:8123
+  esphome:
+    subdomain: esphome
+    upstream: esphome:6052
+  open_webui:
+    subdomain: ai
+    upstream: open-webui:8080
+  gitlab:
+    subdomain: gitlab
+    upstream: gitlab:80
+  dockhand:
+    subdomain: dockhand
+    upstream: dockhand:3000
+  pihole:
+    subdomain: pihole
+    upstream: pihole:80
+    caddy_directives:
+      - redir / /admin/

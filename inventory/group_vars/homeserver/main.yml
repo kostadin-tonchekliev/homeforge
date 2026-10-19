@@ -23,3 +23,6 @@ homeserver_timezone: Europe/Sofia
 
 # Domain served by Caddy (LAN only, resolved by Pi-hole)
 homeserver_domain: home.tonchekliev.info
+
+# Caddy's fixed address on the proxy network: the trusted reverse-proxy IP for Jellyfin, GitLab and HA
+homeserver_caddy_ip: 10.40.0.2

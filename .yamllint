@@ -7,6 +7,7 @@ ignore:
   - /docker
   - /.yamllint
   - /.ansible-lint
+  - /inventory/group_vars/prod/vault.yml  # Ansible Vault ciphertext
 
 rules:
   # Line length

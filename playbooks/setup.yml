@@ -3,3 +3,6 @@
 #   ansible-playbook playbooks/setup.yml --tags caddy
 - name: Base host setup
   ansible.builtin.import_playbook: base.yml
+
+- name: Core services
+  ansible.builtin.import_playbook: core.yml

@@ -1,0 +1,90 @@
+# Reverse proxy for the homelab. LAN-only: nothing here is port-forwarded,
+# and *.{{ homeserver_domain }} only resolves through the local Pi-hole.
+# Managed by Ansible (homeforge, roles/caddy) — edit the template there, not this file.
+# Manual reload:  docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+{
+	# Prometheus metrics for the Grafana "Caddy" dashboard, labelled per service hostname
+	metrics {
+		per_host
+	}
+}
+
+(lan_only) {
+	# Defense in depth: refuse anything that isn't coming from a private network
+	@external not remote_ip private_ranges
+	abort @external
+}
+
+{{ homeserver_domain }}, *.{{ homeserver_domain }} {
+{% if caddy_tls_mode == 'cloudflare' %}
+	tls {
+		dns cloudflare {env.CF_API_TOKEN}
+		resolvers 1.1.1.1
+	}
+{% else %}
+	# Sandbox: certificates from Caddy's own local CA instead of Let's Encrypt
+	tls internal
+{% endif %}
+
+	import lan_only
+
+	# JSON access log: which client (IP, user agent) opened which service
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 50MiB
+			roll_keep 10
+		}
+		format json
+	}
+
+{% for section in caddy_sections %}
+	# --- {{ section.name }} ---
+{% for service_id in section.services %}
+{% set service = homelab_services[service_id] %}
+{% set matcher = service.caddy_matcher | default(service.subdomain) %}
+	@{{ matcher }} host {{ service.subdomain ~ '.' if service.subdomain else '' }}{{ homeserver_domain }}
+	handle @{{ matcher }} {
+{% for directive in service.caddy_directives | default([]) %}
+		{{ directive }}
+{% endfor %}
+		reverse_proxy {{ service.upstream }}
+	}
+{% endfor %}
+
+{% endfor %}
+	# Unknown subdomains get nothing
+	handle {
+		abort
+	}
+}
+
+# Old bookmarks: http://{{ homeserver_lan_ip }} -> dashboard
+http://{{ homeserver_lan_ip }} {
+	redir https://{{ homeserver_domain }}{uri}
+}
+
+# Read-only internal endpoints: upstreams for the Homepage Caddy widget, /metrics for Prometheus.
+# The admin API itself stays on localhost:2019 (it can rewrite the whole config);
+# this port is NOT published on the host, so it's only reachable on the docker proxy network
+# (and from the host itself at {{ homeserver_caddy_ip }}:2020, which is how Prometheus scrapes it).
+http://:2020 {
+	@metrics {
+		method GET
+		path /metrics
+	}
+	handle @metrics {
+		metrics
+	}
+	@upstreams {
+		method GET
+		path /reverse_proxy/upstreams
+	}
+	handle @upstreams {
+		reverse_proxy localhost:2019 {
+			header_up Host localhost:2019
+		}
+	}
+	handle {
+		abort
+	}
+}
