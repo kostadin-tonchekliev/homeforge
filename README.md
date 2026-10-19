@@ -42,6 +42,7 @@ disks, devices…) are variables, never `when: env == ...` branches.
 - Python 3.12, 3.13 or 3.14 (what the pinned ansible-core supports; `setup.sh` picks one, or set `PYTHON=`)
 - Docker + the Docker Compose plugin
 - SSH client (`ssh-keygen`)
+- macOS only: GNU tar (`brew install gnu-tar`), used to unpack the Prometheus/node_exporter releases
 
 ## One-time setup
 

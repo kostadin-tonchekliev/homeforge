@@ -16,6 +16,15 @@ is_supported() {
   [[ " ${supported_pythons[*]} " == *" ${version} "* ]]
 }
 
+# The prometheus.prometheus collection unpacks the Prometheus/node_exporter release
+# archives on this machine, and Ansible's unarchive needs GNU tar; macOS ships BSD tar.
+# unarchive uses `gtar` when it's on the PATH, which Homebrew's gnu-tar provides.
+if [ "$(uname -s)" = Darwin ] && ! command -v gtar >/dev/null; then
+  echo "GNU tar is required on macOS (the system tar is BSD tar). Install it with:" >&2
+  echo "  brew install gnu-tar" >&2
+  exit 1
+fi
+
 echo "==> Setting up virtual environment (.venv)"
 if [ -d .venv ] && ! is_supported .venv/bin/python; then
   echo "    .venv uses an unsupported Python ($(.venv/bin/python --version 2>&1)), recreating it"
