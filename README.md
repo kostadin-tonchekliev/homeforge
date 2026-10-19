@@ -197,6 +197,7 @@ ansible-playbook --syntax-check playbooks/*.yml -i inventory/dev.yml
 
 ## Playbooks
 
+- [update.yml](playbooks/update.yml) - Update in place: `apt dist-upgrade`, pull newer images and recreate the stacks (core services first), rebuild Caddy, prune dangling images. Says when a reboot is needed but never reboots. Takes the same tags as `setup.yml`
 - [setup.yml](playbooks/setup.yml) - Set up everything (imports the playbooks below). Every role is tagged with its own name, e.g. `--tags firewall`
 - [core.yml](playbooks/core.yml) - Core services: Caddy (reverse proxy + TLS, routes generated from `inventory/group_vars/homeserver/services.yml`), Pi-hole (LAN DNS + the `*.home` wildcard), PostgreSQL (shared server, one login + database per app)
 - [media.yml](playbooks/media.yml) - Media: Jellyfin (official APT repo), Deluge, Flaresolverr, Prowlarr, Sonarr, Radarr, Jellystat, Audiobookshelf, Kavita
