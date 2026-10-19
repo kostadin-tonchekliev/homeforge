@@ -1,0 +1,33 @@
+---
+services:
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID={{ homeserver_uid }}
+      - PGID={{ homeserver_gid }}
+      - TZ={{ homeserver_timezone }}
+      # Database: shared PostgreSQL server (/opt/postgres), password in .env
+      - PROWLARR__POSTGRES__HOST=postgres
+      - PROWLARR__POSTGRES__PORT=5432
+      - PROWLARR__POSTGRES__USER=prowlarr
+      - PROWLARR__POSTGRES__PASSWORD=${POSTGRES_PASSWORD}
+      - PROWLARR__POSTGRES__MAINDB=prowlarr-main
+      - PROWLARR__POSTGRES__LOGDB=prowlarr-log
+    volumes:
+      - /opt/prowlarr/config:/config
+    ports:
+      - 9696:9696
+    networks:
+      - arr_network
+      - proxy
+      - db
+    restart: unless-stopped
+
+networks:
+   arr_network:
+     external: true
+   proxy:
+     external: true
+   db:
+     external: true

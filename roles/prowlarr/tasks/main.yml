@@ -1,0 +1,10 @@
+---
+- name: main | Deploy the Prowlarr stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: prowlarr
+    compose_app_dirs:
+      - path: config
+    compose_app_env:
+      POSTGRES_PASSWORD: "{{ postgres_app_passwords['prowlarr'] }}"

@@ -1,0 +1,12 @@
+---
+- name: main | Deploy the Audiobookshelf stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: audiobookshelf
+    compose_app_dirs:
+      - path: config
+      - path: data
+      - path: data/audiobooks
+      - path: data/podcasts
+      - path: data/metadata

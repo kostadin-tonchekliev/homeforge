@@ -12,3 +12,7 @@ pihole_password: "{{ vault_pihole_password }}"
 postgres_password: "{{ vault_postgres_password }}"
 postgres_exporter_password: "{{ vault_postgres_exporter_password }}"
 postgres_app_passwords: "{{ vault_postgres_app_passwords }}"
+
+# Intel UHD 630: OpenCL for HDR tone mapping
+jellyfin_extra_packages:
+  - intel-opencl-icd

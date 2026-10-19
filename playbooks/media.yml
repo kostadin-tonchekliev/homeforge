@@ -1,0 +1,22 @@
+---
+- name: Media (Jellyfin, downloads, *arr, books)
+  hosts: homeserver
+  roles:
+    - role: jellyfin
+      tags: [jellyfin]
+    - role: deluge
+      tags: [deluge]
+    - role: flaresolverr
+      tags: [flaresolverr]
+    - role: prowlarr
+      tags: [prowlarr]
+    - role: sonarr
+      tags: [sonarr]
+    - role: radarr
+      tags: [radarr]
+    - role: jellystat
+      tags: [jellystat]
+    - role: audiobookshelf
+      tags: [audiobookshelf]
+    - role: kavita
+      tags: [kavita]

@@ -182,4 +182,5 @@ ansible-playbook --syntax-check playbooks/*.yml -i inventory/dev.yml
 
 - [setup.yml](playbooks/setup.yml) - Set up everything (imports the playbooks below). Every role is tagged with its own name, e.g. `--tags firewall`
 - [core.yml](playbooks/core.yml) - Core services: Caddy (reverse proxy + TLS, routes generated from `inventory/group_vars/homeserver/services.yml`), Pi-hole (LAN DNS + the `*.home` wildcard), PostgreSQL (shared server, one login + database per app)
+- [media.yml](playbooks/media.yml) - Media: Jellyfin (official APT repo), Deluge, Flaresolverr, Prowlarr, Sonarr, Radarr, Jellystat, Audiobookshelf, Kavita
 - [base.yml](playbooks/base.yml) - Base host: packages, timezone, users and the `media` group, `/media` (data disk mount in prod), ufw, Docker with its daemon config and shared networks

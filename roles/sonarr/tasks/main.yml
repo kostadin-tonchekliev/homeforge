@@ -1,0 +1,10 @@
+---
+- name: main | Deploy the Sonarr stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: sonarr
+    compose_app_dirs:
+      - path: config
+    compose_app_env:
+      POSTGRES_PASSWORD: "{{ postgres_app_passwords['sonarr'] }}"

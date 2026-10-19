@@ -1,0 +1,28 @@
+---
+services:
+  deluge:
+    image: lscr.io/linuxserver/deluge:2.2.0-r1-ls364
+    container_name: deluge
+    environment:
+      - PUID={{ homeserver_uid }}
+      - PGID={{ homeserver_gid }}
+      - TZ={{ homeserver_timezone }}
+      - DELUGE_LOGLEVEL=error
+    volumes:
+      - /opt/deluge/config:/config
+      - /media:/media
+    ports:
+      - 8112:8112
+      - 6881:6881
+      - 6881:6881/udp
+      # 58846 (daemon RPC) closed: Sonarr/Radarr use the web API at deluge:8112
+    networks:
+      - arr_network
+      - proxy
+    restart: unless-stopped
+
+networks:
+   arr_network:
+     external: true
+   proxy:
+     external: true

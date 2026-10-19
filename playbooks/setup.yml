@@ -6,3 +6,6 @@
 
 - name: Core services
   ansible.builtin.import_playbook: core.yml
+
+- name: Media
+  ansible.builtin.import_playbook: media.yml
