@@ -42,7 +42,7 @@ disks, devices…) are variables, never `when: env == ...` branches.
 - Python 3.12, 3.13 or 3.14 (what the pinned ansible-core supports; `setup.sh` picks one, or set `PYTHON=`)
 - Docker + the Docker Compose plugin
 - SSH client (`ssh-keygen`)
-- macOS only: GNU tar (`brew install gnu-tar`), used to unpack the Prometheus/node_exporter releases
+- macOS only: Homebrew (`setup.sh` installs GNU tar with it, used to unpack the Prometheus/node_exporter releases)
 
 ## One-time setup
 
@@ -51,6 +51,7 @@ disks, devices…) are variables, never `when: env == ...` branches.
 ```
 
 - creates `.venv` and installs `requirements.txt` into it
+- on macOS, installs GNU tar (`brew install gnu-tar`) if it is missing
 - installs the Ansible collections from `requirements.yml`
 - generates the sandbox SSH keypair (`docker/ssh_keys/ansible_test`)
 - prompts for the path to your real SSH private key for the mini PC and writes it to `inventory/host_vars/bigboy.yml` (gitignored)

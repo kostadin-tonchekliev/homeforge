@@ -20,9 +20,12 @@ is_supported() {
 # archives on this machine, and Ansible's unarchive needs GNU tar; macOS ships BSD tar.
 # unarchive uses `gtar` when it's on the PATH, which Homebrew's gnu-tar provides.
 if [ "$(uname -s)" = Darwin ] && ! command -v gtar >/dev/null; then
-  echo "GNU tar is required on macOS (the system tar is BSD tar). Install it with:" >&2
-  echo "  brew install gnu-tar" >&2
-  exit 1
+  echo "==> Installing GNU tar (brew install gnu-tar)"
+  if ! command -v brew >/dev/null; then
+    echo "Homebrew is needed to install GNU tar: https://brew.sh" >&2
+    exit 1
+  fi
+  brew install gnu-tar
 fi
 
 echo "==> Setting up virtual environment (.venv)"
