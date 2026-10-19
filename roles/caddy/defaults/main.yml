@@ -1,0 +1,20 @@
+---
+# cloudflare: Let's Encrypt wildcard certificate via DNS-01 (needs caddy_cf_api_token)
+# internal:   Caddy's local CA (the sandbox, which has no public DNS)
+caddy_tls_mode: cloudflare
+caddy_cf_api_token: ""
+
+# Order and grouping of the routes in the Caddyfile; ids refer to homelab_services
+caddy_sections:
+  - name: Dashboard
+    services: [homepage]
+  - name: Media
+    services: [jellyfin, jellystat, audiobookshelf, kavita]
+  - name: PVR / downloads
+    services: [sonarr, radarr, prowlarr, deluge]
+  - name: Monitoring
+    services: [grafana, prometheus, cadvisor, uptime_kuma, ntopng]
+  - name: Home automation
+    services: [home_assistant, esphome]
+  - name: Tools
+    services: [open_webui, gitlab, dockhand, pihole]

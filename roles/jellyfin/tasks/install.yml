@@ -1,0 +1,71 @@
+---
+# Install steps from the official Jellyfin docs ("fully manual" repository method):
+# https://jellyfin.org/docs/general/installation/advanced/manual/
+
+- name: install | Install the prerequisites
+  ansible.builtin.apt:
+    name:
+      - curl
+      - gnupg
+      - software-properties-common
+    state: present
+
+# FFmpeg dependencies come from Universe (enabled by default on Ubuntu, but make sure)
+- name: install | Check whether the Universe repository is enabled
+  ansible.builtin.command:
+    argv: [grep, -Eq, '^Components:.*\buniverse\b', /etc/apt/sources.list.d/ubuntu.sources]
+  register: jellyfin_universe
+  changed_when: false
+  failed_when: jellyfin_universe.rc not in [0, 1]
+
+- name: install | Enable the Universe repository
+  ansible.builtin.command:
+    argv: [add-apt-repository, --yes, --no-update, universe]
+  changed_when: true
+  when: jellyfin_universe.rc == 1
+
+- name: install | Make sure the keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: install | Download the Jellyfin signing key
+  ansible.builtin.get_url:
+    url: https://repo.jellyfin.org/jellyfin_team.gpg.key
+    dest: /etc/apt/keyrings/jellyfin_team.gpg.key
+    mode: "0644"
+  register: jellyfin_key
+
+- name: install | Convert the signing key to a binary keyring
+  ansible.builtin.command:
+    argv: [gpg, --batch, --yes, --dearmor, -o, /etc/apt/keyrings/jellyfin.gpg, /etc/apt/keyrings/jellyfin_team.gpg.key]
+    creates: "{{ omit if jellyfin_key.changed else '/etc/apt/keyrings/jellyfin.gpg' }}"
+
+- name: install | Add the Jellyfin APT repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/jellyfin.sources
+    content: |
+      Types: deb
+      URIs: https://repo.jellyfin.org/{{ ansible_facts['distribution'] | lower }}
+      Suites: {{ ansible_facts['distribution_release'] }}
+      Components: main
+      Architectures: {{ homeserver_deb_arch }}
+      Signed-By: /etc/apt/keyrings/jellyfin.gpg
+    owner: root
+    group: root
+    mode: "0644"
+
+# The metapackage pulls in jellyfin-server, jellyfin-web and the recommended jellyfin-ffmpeg
+- name: install | Install Jellyfin
+  ansible.builtin.apt:
+    name: "{{ ['jellyfin'] + jellyfin_extra_packages }}"
+    state: present
+    install_recommends: true
+    update_cache: true
+
+- name: install | Enable and start Jellyfin
+  ansible.builtin.systemd_service:
+    name: jellyfin
+    enabled: true
+    state: started

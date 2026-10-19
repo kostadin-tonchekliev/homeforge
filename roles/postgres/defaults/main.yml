@@ -1,0 +1,29 @@
+---
+# Pinned to the major version on purpose: a new major can't open an older data directory
+postgres_image: postgres:17
+
+postgres_password: ""
+postgres_exporter_password: ""
+
+# One login per app, owning its databases. Nobody else may connect to them.
+#   password: from postgres_app_passwords[<role>]
+#   extensions: created by the superuser (the app login isn't allowed to)
+postgres_app_passwords: {}
+postgres_apps:
+  - role: gitlab
+    databases: [gitlabhq_production]
+    extensions: [pg_trgm, btree_gist, amcheck]
+  - role: grafana
+    databases: [grafana]
+  - role: homeassistant
+    databases: [homeassistant]
+  - role: jellystat
+    databases: [jfstat]
+  - role: openwebui
+    databases: [openwebui]
+  - role: prowlarr
+    databases: [prowlarr-main, prowlarr-log]
+  - role: radarr
+    databases: [radarr-main, radarr-log]
+  - role: sonarr
+    databases: [sonarr-main, sonarr-log]

@@ -1,0 +1,14 @@
+---
+gitlab_db_password: "{{ postgres_app_passwords['gitlab'] }}"
+
+# Runners registered in GitLab (the tokens come from registering them there)
+gitlab_runners:
+  - name: runner-1
+    id: 1
+    concurrent: 3
+    token_obtained_at: "2026-09-07T17:57:19Z"
+  - name: runner-2
+    id: 2
+    concurrent: 1
+    token_obtained_at: "2026-09-07T17:57:22Z"
+gitlab_runner_tokens: {}

@@ -1,0 +1,6 @@
+---
+- name: main | Install Jellyfin from the official APT repository
+  ansible.builtin.include_tasks: install.yml
+
+- name: main | Configure Jellyfin
+  ansible.builtin.include_tasks: config.yml

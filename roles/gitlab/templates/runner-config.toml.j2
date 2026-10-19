@@ -1,0 +1,33 @@
+concurrent = {{ runner.concurrent }}
+check_interval = 0
+shutdown_timeout = 0
+
+[session_server]
+  session_timeout = 1800
+
+[[runners]]
+  name = "{{ runner.name }}"
+  url = "http://gitlab"
+  clone_url = "https://gitlab.{{ homeserver_domain }}"
+  id = {{ runner.id }}
+  token = "{{ gitlab_runner_tokens[runner.name] }}"
+  token_obtained_at = {{ runner.token_obtained_at }}
+  token_expires_at = 0001-01-01T00:00:00Z
+  executor = "docker"
+  [runners.cache]
+    MaxUploadedArchiveSize = 0
+    [runners.cache.s3]
+      AssumeRoleMaxConcurrency = 0
+    [runners.cache.gcs]
+    [runners.cache.azure]
+  [runners.docker]
+    tls_verify = false
+    image = "alpine:latest"
+    privileged = false
+    disable_entrypoint_overwrite = false
+    oom_kill_disable = false
+    disable_cache = false
+    volumes = ["/var/run/docker.sock:/var/run/docker.sock", "/cache"]
+    volume_keep = false
+    shm_size = 0
+    network_mtu = 0

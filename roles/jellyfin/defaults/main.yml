@@ -1,0 +1,15 @@
+---
+# Hardware-specific extras, e.g. intel-opencl-icd for HDR tone mapping on Intel iGPUs
+jellyfin_extra_packages: []
+
+# Groups the jellyfin user needs: media (read the library), video/render (GPU transcoding),
+# and the server user's own group (folders under /media/reading are <user>:<user>)
+jellyfin_groups:
+  - "{{ homeserver_media_group }}"
+  - video
+  - render
+  - "{{ homeserver_user }}"
+
+# Reverse proxies whose X-Forwarded-For Jellyfin trusts (Caddy)
+jellyfin_known_proxies:
+  - "{{ homeserver_caddy_ip }}"

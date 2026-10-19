@@ -1,0 +1,31 @@
+---
+# Managed by Ansible (homeforge, roles/homepage): generated from homelab_services.
+# Links (href) go through Caddy: https://<name>.{{ homeserver_domain }}
+# Widgets talk to services directly over the internal "proxy" docker network
+# (container names) or host.docker.internal for host-level services.
+{% for group in homepage_groups %}
+- {{ group.name }}:
+{% for service_id in group.services %}
+{% set service = homelab_services[service_id] %}
+{% set tile = service.tile %}
+    - {{ tile.name }}:
+{% if tile.href is defined %}
+        href: {{ tile.href }}
+{% else %}
+        href: https://{{ service.subdomain ~ '.' if service.subdomain else '' }}{{ homeserver_domain }}
+{% endif %}
+        icon: {{ tile.icon }}
+{% if tile.description is defined %}
+        description: {{ tile.description | to_json }}
+{% endif %}
+{% if tile.container is defined %}
+        server: my-docker
+        container: {{ tile.container }}
+{% endif %}
+{% if tile.widget is defined %}
+        widget:
+          {{ tile.widget | to_nice_yaml(indent=2, sort_keys=false) | trim | indent(10) }}
+{% endif %}
+{% endfor %}
+
+{% endfor %}

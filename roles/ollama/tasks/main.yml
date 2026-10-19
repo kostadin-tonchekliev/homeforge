@@ -1,0 +1,11 @@
+---
+- name: main | Deploy the Ollama + Open WebUI stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: ollama
+    compose_app_dirs:
+      - path: models
+      - path: webui
+    compose_app_env:
+      OPENWEBUI_DB_PASSWORD: "{{ ollama_openwebui_db_password }}"

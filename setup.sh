@@ -1,21 +1,77 @@
 #!/usr/bin/env bash
 #
-# One-time local setup: virtualenv, requirements, sandbox SSH keypair, and
+# One-time local setup: virtualenv, requirements, collections, sandbox SSH keypair, and
 # wiring your real private key into inventory/host_vars/bigboy.yml.
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# Python versions the pinned ansible-core (requirements.txt) supports as a controller.
+# Newer Pythons break it (e.g. 3.15: "module 'dataclasses' has no attribute '_is_type'").
+supported_pythons=(3.14 3.13 3.12)
+
+is_supported() {
+  local version
+  version=$("$1" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null) || return 1
+  [[ " ${supported_pythons[*]} " == *" ${version} "* ]]
+}
+
+# The prometheus.prometheus collection unpacks the Prometheus/node_exporter release
+# archives on this machine, and Ansible's unarchive needs GNU tar; macOS ships BSD tar.
+# unarchive uses `gtar` when it's on the PATH, which Homebrew's gnu-tar provides.
+if [ "$(uname -s)" = Darwin ] && ! command -v gtar >/dev/null; then
+  echo "==> Installing GNU tar (brew install gnu-tar)"
+  if ! command -v brew >/dev/null; then
+    echo "Homebrew is needed to install GNU tar: https://brew.sh" >&2
+    exit 1
+  fi
+  brew install gnu-tar
+fi
+
 echo "==> Setting up virtual environment (.venv)"
+if [ -d .venv ] && ! is_supported .venv/bin/python; then
+  echo "    .venv uses an unsupported Python ($(.venv/bin/python --version 2>&1)), recreating it"
+  rm -rf .venv
+fi
+
 if [ -d .venv ]; then
   echo "    .venv already exists, skipping creation"
 else
-  python3 -m venv .venv
+  # $PYTHON overrides the choice; otherwise use the newest supported python3.X on the PATH
+  python="${PYTHON:-}"
+  if [ -z "$python" ]; then
+    for version in "${supported_pythons[@]}" ""; do
+      if command -v "python${version:-3}" >/dev/null && is_supported "python${version:-3}"; then
+        python="python${version:-3}"
+        break
+      fi
+    done
+  fi
+  if [ -z "$python" ] || ! is_supported "$python"; then
+    echo "No supported Python found: ansible-core needs Python ${supported_pythons[*]}." >&2
+    echo "Install one (e.g. 'brew install python@3.13') or point PYTHON at it: PYTHON=/path/to/python3.13 ./setup.sh" >&2
+    exit 1
+  fi
+  echo "    using $("$python" --version) ($(command -v "$python"))"
+  "$python" -m venv .venv
 fi
 source .venv/bin/activate
 
 echo "==> Installing requirements"
 pip install -r requirements.txt
+
+echo "==> Installing Ansible collections (requirements.yml)"
+# Galaxy downloads time out now and then; already-installed collections are skipped on retry
+for attempt in 1 2 3; do
+  if ansible-galaxy collection install -r requirements.yml --timeout 180; then
+    break
+  elif [ "$attempt" -eq 3 ]; then
+    echo "Installing the collections failed 3 times; check your connection and re-run ./setup.sh" >&2
+    exit 1
+  fi
+  echo "    attempt $attempt failed, retrying in 10s"
+  sleep 10
+done
 
 echo "==> Generating sandbox SSH keypair (docker/ssh_keys/ansible_test)"
 mkdir -p docker/ssh_keys

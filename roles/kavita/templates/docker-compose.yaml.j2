@@ -1,0 +1,19 @@
+---
+services:
+  kavita:
+    image: jvmilazz0/kavita:latest
+    container_name: kavita
+    volumes:
+      - /opt/kavita/config:/kavita/config
+      - /media/reading:/media
+    ports:
+      - 5000:5000
+    environment:
+      - TZ={{ homeserver_timezone }}
+    networks:
+      - proxy
+    restart: unless-stopped
+
+networks:
+   proxy:
+     external: true

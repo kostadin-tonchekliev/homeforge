@@ -1,0 +1,23 @@
+---
+- name: main | Deploy the Caddy stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: caddy
+    compose_app_compose_mode: "0644"
+    compose_app_dirs:
+      - path: conf
+      - path: data
+      - path: config
+      - path: logs
+    compose_app_env:
+      CF_API_TOKEN: "{{ caddy_cf_api_token }}"
+    compose_app_files:
+      - src: Dockerfile
+        dest: Dockerfile
+    compose_app_templates:
+      - src: Caddyfile.j2
+        dest: conf/Caddyfile
+    # conf/ is mounted as a folder, so a graceful reload is enough to pick up a new Caddyfile
+    compose_app_on_config_change: command
+    compose_app_reload_command: [docker, exec, caddy, caddy, reload, --config, /etc/caddy/Caddyfile]

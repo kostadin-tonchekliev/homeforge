@@ -1,0 +1,27 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/info-widgets/
+
+- greeting:
+    text_size: xl
+    text: BigBoy
+
+- resources:
+    cpu: true
+    memory: true
+    uptime: true
+    disk: /media
+
+- datetime:
+    text_size: md
+    format:
+      weekday: short
+      day: numeric
+      month: short
+      hour: 2-digit
+      minute: 2-digit
+      hour12: false
+
+- search:
+    provider: google
+    target: _blank

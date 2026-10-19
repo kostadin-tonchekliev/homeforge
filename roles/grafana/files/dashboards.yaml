@@ -1,0 +1,18 @@
+---
+# Dashboards loaded from JSON files (kept under /var/lib/grafana/dashboards so they're plain, backed-up files)
+apiVersion: 1
+providers:
+  - name: general
+    orgId: 1
+    folder: ''
+    type: file
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/general
+  - name: homelab
+    orgId: 1
+    folder: Homelab
+    type: file
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/homelab

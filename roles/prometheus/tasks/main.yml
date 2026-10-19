@@ -1,0 +1,6 @@
+---
+# Installed with the official Prometheus community collection (binary release for the
+# host's architecture, systemd unit, config): https://github.com/prometheus-community/ansible
+- name: main | Install and configure Prometheus
+  ansible.builtin.include_role:
+    name: prometheus.prometheus.prometheus

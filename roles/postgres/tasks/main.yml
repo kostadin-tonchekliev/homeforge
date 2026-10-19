@@ -1,0 +1,32 @@
+---
+- name: main | Deploy the PostgreSQL stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: postgres
+    compose_app_dirs:
+      # The postgres image chowns data/ to its own uid on first start
+      - path: data
+      - path: init
+        mode: "0755"
+    compose_app_env:
+      POSTGRES_PASSWORD: "{{ postgres_password }}"
+      EXPORTER_PASSWORD: "{{ postgres_exporter_password }}"
+    compose_app_files:
+      # Runs only when data/ is first initialised
+      - src: 01-monitoring-role.sh
+        dest: init/01-monitoring-role.sh
+        mode: "0755"
+      - src: create-app-db.sh
+        dest: create-app-db.sh
+        mode: "0750"
+      - src: README.md
+        dest: README.md
+        mode: "0664"
+    # The init script only matters on an empty data directory; never restart the DB for it
+    compose_app_on_config_change: none
+    # Databases are created right after, so wait for the healthcheck
+    compose_app_wait: true
+
+- name: main | Create the app logins and databases
+  ansible.builtin.include_tasks: databases.yml

@@ -1,0 +1,100 @@
+---
+- name: main | Look up the server user's uid and gid
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ homeserver_user }}"
+
+# Containers run as this uid/gid (linuxserver PUID/PGID, homepage, etc.).
+# Deliberately not role-prefixed: compose templates of every service read them.
+- name: main | Remember the server user's uid and gid  # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    homeserver_uid: "{{ ansible_facts['getent_passwd'][homeserver_user][1] }}"
+    homeserver_gid: "{{ ansible_facts['getent_passwd'][homeserver_user][2] }}"
+
+- name: main | Create the stack directory
+  ansible.builtin.file:
+    path: "{{ compose_app_dir }}"
+    state: directory
+    owner: "{{ homeserver_user }}"
+    group: "{{ homeserver_user }}"
+    mode: "0755"
+
+- name: main | Create the stack's data directories
+  ansible.builtin.file:
+    path: "{{ compose_app_dir }}/{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
+    mode: "{{ item.mode | default(omit) }}"
+  loop: "{{ compose_app_dirs }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: main | Write the .env file
+  ansible.builtin.copy:
+    dest: "{{ compose_app_dir }}/.env"
+    content: "{% for key, value in compose_app_env.items() %}{{ key }}={{ value }}\n{% endfor %}"
+    owner: "{{ homeserver_user }}"
+    group: "{{ homeserver_user }}"
+    mode: "0600"
+  when: compose_app_env | length > 0
+  no_log: true
+
+- name: main | Render the stack's config templates
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ compose_app_dir }}/{{ item.dest }}"
+    owner: "{{ item.owner | default(homeserver_user) }}"
+    group: "{{ item.group | default(homeserver_user) }}"
+    mode: "{{ item.mode | default('0644') }}"
+  loop: "{{ compose_app_templates }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  register: compose_app_templates_result
+
+- name: main | Copy the stack's static config files
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ compose_app_dir }}/{{ item.dest }}"
+    owner: "{{ item.owner | default(homeserver_user) }}"
+    group: "{{ item.group | default(homeserver_user) }}"
+    mode: "{{ item.mode | default('0644') }}"
+  loop: "{{ compose_app_files }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  register: compose_app_files_result
+
+- name: main | Render the compose file
+  ansible.builtin.template:
+    src: "{{ compose_app_compose_template }}"
+    dest: "{{ compose_app_dir }}/docker-compose.yaml"
+    owner: "{{ homeserver_user }}"
+    group: "{{ homeserver_user }}"
+    mode: "{{ compose_app_compose_mode }}"
+
+- name: main | Start the stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ compose_app_dir }}"
+    state: present
+    pull: "{{ compose_app_pull }}"
+    build: "{{ compose_app_build }}"
+    wait: "{{ compose_app_wait }}"
+  register: compose_app_up
+
+- name: main | Apply changed config files
+  when:
+    - not compose_app_up.changed
+    - (compose_app_templates_result.changed or compose_app_files_result.changed)
+    - compose_app_on_config_change != 'none'
+  block:
+    - name: main | Restart the stack to pick up the new config
+      community.docker.docker_compose_v2:
+        project_src: "{{ compose_app_dir }}"
+        state: restarted
+      when: compose_app_on_config_change == 'restart'
+
+    - name: main | Reload the stack's config
+      ansible.builtin.command:
+        argv: "{{ compose_app_reload_command }}"
+      changed_when: true
+      when: compose_app_on_config_change == 'command'

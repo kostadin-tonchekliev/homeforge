@@ -1,0 +1,37 @@
+---
+- name: main | Install ufw
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+
+- name: main | Deny incoming connections by default
+  community.general.ufw:
+    direction: incoming
+    default: deny
+
+- name: main | Allow outgoing connections by default
+  community.general.ufw:
+    direction: outgoing
+    default: allow
+
+- name: main | Deny routed (forwarded) connections by default
+  community.general.ufw:
+    direction: routed
+    default: deny
+
+# Rules go in before ufw is enabled, so SSH is never cut off
+- name: main | Add the firewall rules
+  community.general.ufw:
+    rule: "{{ item.rule }}"
+    port: "{{ item.port | default(omit) }}"
+    proto: "{{ item.proto | default(omit) }}"
+    from_ip: "{{ item.from_ip | default(omit) }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ firewall_rules }}"
+  loop_control:
+    label: "{{ item.comment }}"
+
+- name: main | Enable ufw with low logging
+  community.general.ufw:
+    state: enabled
+    logging: "low"

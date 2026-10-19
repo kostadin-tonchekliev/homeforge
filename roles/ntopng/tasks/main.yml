@@ -1,0 +1,10 @@
+---
+- name: main | Deploy the ntopng stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: ntopng
+    compose_app_compose_mode: "0644"
+    compose_app_dirs:
+      - path: data
+      - path: redis

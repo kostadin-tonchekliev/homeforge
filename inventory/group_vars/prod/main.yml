@@ -1,0 +1,34 @@
+---
+# Real mini PC overrides. Secrets are referenced from vault.yml as vault_* variables.
+
+homeserver_lan_ip: 192.168.1.113
+
+# 1.8 TB NVMe data disk, mounted at /media
+common_media_disk_uuid: 4e566a00-bc54-47c8-bb1c-4993d4e8ed6b
+
+caddy_cf_api_token: "{{ vault_caddy_cf_api_token }}"
+pihole_password: "{{ vault_pihole_password }}"
+
+postgres_password: "{{ vault_postgres_password }}"
+postgres_exporter_password: "{{ vault_postgres_exporter_password }}"
+postgres_app_passwords: "{{ vault_postgres_app_passwords }}"
+
+# Intel UHD 630: OpenCL for HDR tone mapping
+jellyfin_extra_packages:
+  - intel-opencl-icd
+
+grafana_db_password: "{{ vault_postgres_app_passwords['grafana'] }}"
+
+ntopng_interface: eno1
+
+homepage_widget_keys: "{{ vault_homepage_widget_keys }}"
+deluge_web_password: "{{ vault_deluge_password }}"
+
+esphome_password: "{{ vault_esphome_password }}"
+
+# Zigbee coordinator
+home_assistant_devices:
+  - /dev/ttyUSB0
+home_assistant_secrets: "{{ vault_home_assistant_secrets }}"
+
+gitlab_runner_tokens: "{{ vault_gitlab_runner_tokens }}"

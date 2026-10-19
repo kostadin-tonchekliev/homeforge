@@ -1,0 +1,51 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/settings/
+#
+# Look & feel: dark "Liquid Glass" theme. Visual styling lives in custom.css;
+# this file only sets the theme base, layout grid and group order.
+
+title: BigBoy
+
+# Dark mode by default; slate is a cool neutral that matches the glass tint.
+theme: dark
+color: slate
+
+# Each top widget gets its own glass capsule (styled in custom.css).
+headerStyle: boxedWidgets
+
+# Compact status dots instead of text badges; equal-height cards per row.
+statusStyle: dot
+useEqualHeights: true
+
+hideVersion: true
+target: _blank
+
+# Group order = order below. Most-used first: Media, Tools, then
+# downloads (PVR + Miscellaneous). Row groups span the full width as a
+# 4-column grid; column groups sit side by side (4 across on desktop) and
+# line up with the 4-column grid above. Phones get a single column.
+layout:
+  Media:
+    style: row
+    columns: 4
+    icon: "mdi-play-box-multiple-#f9a8d4"
+  Tools:
+    style: row
+    columns: 4
+    icon: "mdi-hammer-wrench-#fcd34d"
+  PVR:
+    style: column
+    icon: "mdi-television-classic-#93c5fd"
+  Miscellaneous:
+    style: column
+    icon: "mdi-download-network-#c4b5fd"
+  Monitoring:
+    style: column
+    icon: "mdi-chart-areaspline-#6ee7b7"
+  Network:
+    style: column
+    icon: "mdi-lan-#67e8f9"
+  Database:
+    style: column
+    icon: "mdi-database-#fdba74"

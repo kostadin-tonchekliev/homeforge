@@ -1,0 +1,38 @@
+---
+services:
+   ollama:
+     image: ollama/ollama:latest
+     container_name: ollama
+     # No published port: the unauthenticated API is only reachable by open-webui (http://ollama:11434)
+     tty: true
+     restart: unless-stopped
+     volumes:
+       - /opt/ollama/models:/root/.ollama
+
+   open-webui:
+     image: ghcr.io/open-webui/open-webui:main
+     container_name: open-webui
+     volumes:
+       - /opt/ollama/webui:/app/backend/data
+     depends_on:
+       - ollama
+     ports:
+       - 3004:8080
+     environment:
+       - 'OLLAMA_BASE_URL=http://ollama:11434'
+       - 'WEBUI_SECRET_KEY='
+       # Database: shared PostgreSQL server (/opt/postgres), password in .env. Vector store stays local (Chroma).
+       - 'DATABASE_URL=postgresql://openwebui:${OPENWEBUI_DB_PASSWORD}@postgres:5432/openwebui'
+     extra_hosts:
+       - host.docker.internal:host-gateway
+     networks:
+       - default
+       - proxy
+       - db
+     restart: unless-stopped
+
+networks:
+   proxy:
+     external: true
+   db:
+     external: true

@@ -1,0 +1,9 @@
+---
+argument_specs:
+  main:
+    short_description: Deploy a Docker Compose stack to /opt/<name>
+    options:
+      compose_app_name:
+        type: str
+        required: true
+        description: Stack name, used for /opt/<name> and the compose project.

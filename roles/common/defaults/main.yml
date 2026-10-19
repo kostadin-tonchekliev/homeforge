@@ -1,6 +1,19 @@
 ---
 common_packages:
+  - acl
   - ca-certificates
   - curl
   - git
+  - gnupg
   - vim
+
+# UUID of the data disk mounted at /media. Unset (sandbox): /media is a plain directory.
+common_media_disk_uuid: ""
+
+# Media library layout. Jellyfin reads it through the media group, Deluge/*arr write to it.
+common_media_dirs:
+  - /media/plex
+  - /media/plex/Movies
+  - /media/plex/Series
+  - /media/deluge
+  - /media/reading

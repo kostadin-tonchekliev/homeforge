@@ -1,0 +1,35 @@
+---
+# Order of the dashboard groups and their tiles; ids refer to homelab_services.
+# Group styles/icons are in files/settings.yaml (layout).
+homepage_groups:
+  - name: Media
+    services: [jellyfin, jellystat, audiobookshelf, kavita]
+  - name: PVR
+    services: [sonarr, radarr]
+  - name: Miscellaneous
+    services: [prowlarr, deluge, dockhand]
+  - name: Network
+    services: [caddy, pihole, ntopng]
+  - name: Database
+    services: [postgres, postgres_exporter]
+  - name: Monitoring
+    services: [grafana, uptime_kuma, prometheus]
+  - name: Tools
+    services: [home_assistant, esphome, open_webui, gitlab]
+
+# API keys of the services shown in widgets, keyed by service id
+homepage_widget_keys: {}
+
+# Exposed to services.yaml as {{HOMEPAGE_VAR_PIHOLE_PASSWORD}}
+homepage_pihole_password: "{{ pihole_password }}"
+
+# Copied unchanged from files/ into /opt/gethomepage/config
+homepage_static_files:
+  - { src: settings.yaml, dest: config/settings.yaml }
+  - { src: widgets.yaml, dest: config/widgets.yaml }
+  - { src: docker.yaml, dest: config/docker.yaml }
+  - { src: bookmarks.yaml, dest: config/bookmarks.yaml }
+  - { src: custom.css, dest: config/custom.css }
+  - { src: custom.js, dest: config/custom.js }
+  - { src: kubernetes.yaml, dest: config/kubernetes.yaml }
+  - { src: proxmox.yaml, dest: config/proxmox.yaml }

@@ -1,0 +1,37 @@
+---
+# Shared building block for every Docker Compose stack in /opt/<name>.
+# Service roles call it with include_role and set at least compose_app_name. The compose
+# file and any compose_app_templates / compose_app_files are looked up in the *calling*
+# role's templates/ and files/ directories.
+
+# Stack name: the /opt/<name> directory and the docker compose project
+compose_app_name: ""
+compose_app_dir: "/opt/{{ compose_app_name }}"
+
+# Template rendered to <dir>/docker-compose.yaml
+compose_app_compose_template: docker-compose.yaml.j2
+compose_app_compose_mode: "0664"
+
+# Extra directories under the stack: [{path, owner, group, mode}], all keys but path optional.
+# Never recursive, and owner/mode are left alone when not given, so data
+# directories that containers chown for themselves keep their ownership.
+compose_app_dirs: []
+
+# Variables written to <dir>/.env (mode 0600) for ${VAR} interpolation in the compose file.
+# Empty: no .env is managed.
+compose_app_env: {}
+
+# Config files from the calling role: [{src, dest, mode, owner, group}], dest relative to the
+# stack dir; owner/group default to the server user
+compose_app_templates: []
+compose_app_files: []
+
+# What to do when a config file changed but the containers weren't recreated by compose:
+#   restart - restart the stack;  command - run compose_app_reload_command;  none
+compose_app_on_config_change: restart
+compose_app_reload_command: []
+
+# docker compose up options
+compose_app_pull: policy
+compose_app_build: policy
+compose_app_wait: false
