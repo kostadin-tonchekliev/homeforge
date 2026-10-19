@@ -19,7 +19,9 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install --quiet -r requirements.txt
+        run: |
+          pip install --quiet -r requirements.txt
+          ansible-galaxy collection install -r requirements.yml
 
       - name: Run ansible-lint
         run: ansible-lint
@@ -38,7 +40,9 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install --quiet -r requirements.txt
+        run: |
+          pip install --quiet -r requirements.txt
+          ansible-galaxy collection install -r requirements.yml
 
       - name: Run yamllint
         run: yamllint -c .yamllint .
@@ -61,7 +65,9 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install --quiet -r requirements.txt
+        run: |
+          pip install --quiet -r requirements.txt
+          ansible-galaxy collection install -r requirements.yml
 
       - name: Run syntax check
         run: |

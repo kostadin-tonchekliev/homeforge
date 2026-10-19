@@ -1,0 +1,6 @@
+---
+# Vars shared by every environment. Environment-specific values live in
+# group_vars/dev/ and group_vars/prod/ (both child groups of homeserver,
+# so they override anything set here).
+ansible_become: true
+ansible_become_method: sudo

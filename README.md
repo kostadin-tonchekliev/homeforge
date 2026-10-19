@@ -11,23 +11,31 @@ A local Docker sandbox (`docker/`) runs disposable Ubuntu 24.04 and Ubuntu 26.04
 ├── .ansible-lint                  # ansible-lint rule configuration
 ├── .yamllint                      # yamllint configuration
 ├── ansible.cfg                    # points ansible-playbook at the test inventory by default
-├── requirements.txt               # pinned ansible-core version (installed into .venv)
+├── requirements.txt               # pinned ansible-core / lint versions (installed into .venv)
+├── requirements.yml               # pinned Ansible collections (installed by setup.sh)
 ├── setup.sh                       # one-time local setup (venv, requirements, SSH keys) — see below
 ├── docker/                        # local test sandbox — never used against the real mini PC
 │   ├── Dockerfile-24.04           # Ubuntu 24.04 + systemd + sshd, built for Ansible testing
 │   ├── Dockerfile-26.04           # Ubuntu 26.04 + systemd + sshd, built for Ansible testing
-│   ├── docker-compose.yml         # runs the images above, port 2222 -> 22 and 2223 -> 22
+│   ├── docker-compose.yml         # runs the images above, 127.0.0.1:2222 -> 22 and 127.0.0.1:2223 -> 22
 │   └── ssh_keys/                  # keypair generated locally, gitignored
 ├── inventory/
-│   ├── dev.yml                    # homeserver group -> the Docker sandbox
-│   ├── production.yml             # homeserver group -> the real mini PC
+│   ├── dev.yml                    # homeserver -> dev group -> the Docker sandbox
+│   ├── production.yml             # homeserver -> prod group -> the real mini PC
 │   ├── group_vars/
-│   │   └── homeserver.yml         # vars shared by both environments (e.g. ansible_become)
+│   │   ├── homeserver/            # vars shared by both environments (e.g. ansible_become)
+│   │   ├── dev/                   # sandbox overrides + dummy secrets (plain text)
+│   │   └── prod/                  # mini PC overrides + vault.yml (encrypted secrets)
 │   └── host_vars/
 │       └── bigboy.yml             # machine-specific overrides (e.g. SSH key path), gitignored
 ├── playbooks/                     # locations for the different playbooks
 └── roles/                         # the actual task implementations, called by playbooks
 ```
+
+`dev` and `prod` are child groups of `homeserver`, so anything set in `group_vars/dev/`
+or `group_vars/prod/` overrides the shared value in `group_vars/homeserver/`. Roles are
+written once; the differences between the sandbox and the real box (LAN IP, TLS mode,
+disks, devices…) are variables, never `when: env == ...` branches.
 
 ## Prerequisites
 
@@ -42,6 +50,7 @@ A local Docker sandbox (`docker/`) runs disposable Ubuntu 24.04 and Ubuntu 26.04
 ```
 
 - creates `.venv` and installs `requirements.txt` into it
+- installs the Ansible collections from `requirements.yml`
 - generates the sandbox SSH keypair (`docker/ssh_keys/ansible_test`)
 - prompts for the path to your real SSH private key for the mini PC and writes it to `inventory/host_vars/bigboy.yml` (gitignored)
 
@@ -63,50 +72,50 @@ source .venv/bin/activate
 docker compose -f docker/docker-compose.yml up -d --build
 
 # run a playbook against it (uses inventory/dev.yml by default, per ansible.cfg)
-ansible-playbook playbooks/example.yml
+ansible-playbook playbooks/setup.yml
+
+# only one of the boxes
+ansible-playbook playbooks/setup.yml --limit test-ubuntu-noble
 ```
 
-Expected output:
-
-```
-PLAY [Example playbook] ****************************************************************************************************************************************************************************************
-
-TASK [Gathering Facts] *****************************************************************************************************************************************************************************************
-ok: [test-ubuntu-noble]
-ok: [test-ubuntu-resolute]
-
-TASK [example : Print welcome message] *************************************************************************************************************************************************************************
-ok: [test-ubuntu-noble] => {
-    "msg": "Hello from the homeserver Ansible project!"
-}
-ok: [test-ubuntu-resolute] => {
-    "msg": "Hello from the homeserver Ansible project!"
-}
-
-PLAY RECAP *****************************************************************************************************************************************************************************************************
-test-ubuntu-noble          : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-test-ubuntu-resolute       : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-```
+The sandbox boxes run Docker inside themselves (each keeps its `/var/lib/docker` in a
+named volume), so the whole stack can be brought up in them. Their SSH ports only listen
+on `127.0.0.1`.
 
 Tear the sandbox down when you're done:
 
 ```bash
 docker compose -f docker/docker-compose.yml down
+
+# also throw away the Docker data inside the boxes
+docker compose -f docker/docker-compose.yml down -v
 ```
 
-Rebuilding from scratch is just `down` followed by `up -d --build` again — that's the
+Rebuilding from scratch is just `down -v` followed by `up -d --build` again — that's the
 point of the sandbox: it should always be safe to throw away and recreate.
 
 ## Running against the real mini PC
 
-Run any playbook with the production inventory explicitly:
+The production secrets live in `inventory/group_vars/prod/vault.yml`, encrypted with
+Ansible Vault. Put the vault password in `.vault_pass` (gitignored, `chmod 600`) and
+pass it on every production run:
 
-   ```bash
-   ansible-playbook -i inventory/production.yml playbooks/example.yml
-   ```
+```bash
+# always look at what would change first
+ansible-playbook -i inventory/production.yml playbooks/setup.yml --vault-password-file .vault_pass --check --diff
 
-   Production is never used by accident — `ansible.cfg` defaults to the test inventory,
-   so you must pass `-i inventory/production.yml` explicitly to target the real box.
+# then apply
+ansible-playbook -i inventory/production.yml playbooks/setup.yml --vault-password-file .vault_pass
+```
+
+Production is never used by accident — `ansible.cfg` defaults to the test inventory,
+so you must pass `-i inventory/production.yml` explicitly to target the real box.
+
+Edit the secrets with:
+
+```bash
+ansible-vault edit inventory/group_vars/prod/vault.yml --vault-password-file .vault_pass
+```
 
 ## Branch naming conventions
 
@@ -140,11 +149,10 @@ To run the checks locally (tools are included in `requirements.txt` and installe
 ```bash
 source .venv/bin/activate
 ansible-lint
-yamllint -c .yamllint.yml .
+yamllint -c .yamllint .
 ansible-playbook --syntax-check playbooks/*.yml -i inventory/dev.yml
 ```
 
 ## Playbooks
 
-- [example.yml](playbooks/example.yml) - Example playbook for testing the Ansible setup
 - [setup.yml](playbooks/setup.yml) - Setup all services

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# One-time local setup: virtualenv, requirements, sandbox SSH keypair, and
+# One-time local setup: virtualenv, requirements, collections, sandbox SSH keypair, and
 # wiring your real private key into inventory/host_vars/bigboy.yml.
 set -euo pipefail
 
@@ -16,6 +16,9 @@ source .venv/bin/activate
 
 echo "==> Installing requirements"
 pip install -r requirements.txt
+
+echo "==> Installing Ansible collections (requirements.yml)"
+ansible-galaxy collection install -r requirements.yml
 
 echo "==> Generating sandbox SSH keypair (docker/ssh_keys/ansible_test)"
 mkdir -p docker/ssh_keys

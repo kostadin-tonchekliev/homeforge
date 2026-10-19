@@ -1,0 +1,2 @@
+---
+# Real mini PC overrides. Secrets are referenced from vault.yml as vault_* variables.
