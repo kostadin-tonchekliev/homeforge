@@ -21,7 +21,8 @@ compose_app_dirs: []
 # Empty: no .env is managed.
 compose_app_env: {}
 
-# Config files from the calling role: [{src, dest, mode}], dest relative to the stack dir
+# Config files from the calling role: [{src, dest, mode, owner, group}], dest relative to the
+# stack dir; owner/group default to the server user
 compose_app_templates: []
 compose_app_files: []
 

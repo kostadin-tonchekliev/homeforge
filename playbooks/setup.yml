@@ -12,3 +12,6 @@
 
 - name: Monitoring
   ansible.builtin.import_playbook: monitoring.yml
+
+- name: Apps
+  ansible.builtin.import_playbook: apps.yml

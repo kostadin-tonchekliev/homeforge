@@ -1,0 +1,17 @@
+---
+services:
+  dockhand:
+    image: fnsys/dockhand:latest
+    container_name: dockhand
+    restart: unless-stopped
+    # No published port: Docker-socket access is only reachable via https://dockhand.{{ homeserver_domain }}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/dockhand/data:/app/data
+      - /opt:/opt
+    networks:
+      - proxy
+
+networks:
+   proxy:
+     external: true

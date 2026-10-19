@@ -1,0 +1,72 @@
+---
+# USB devices passed through to the container (Zigbee stick in prod)
+home_assistant_devices: []
+
+# Values for config/secrets.yaml (recorder_db_url is built from postgres_app_passwords)
+home_assistant_secrets:
+  some_password: ""
+  todoist_token: ""
+  caldav_username: ""
+  caldav_password: ""
+
+# Hand-written config files copied into config/ (the helper scripts are called by
+# shell_command / command_line sensors in configuration.yaml)
+home_assistant_files:
+  - src: configuration.yaml
+    dest: config/configuration.yaml
+    mode: "0644"
+  - src: wol_lg_tv.py
+    dest: config/wol_lg_tv.py
+    owner: root
+    group: root
+    mode: "0644"
+  - src: scripts/add_meal_prep_item.py
+    dest: config/scripts/add_meal_prep_item.py
+    owner: root
+    group: root
+    mode: "0755"
+  - src: scripts/add_shopping_item.py
+    dest: config/scripts/add_shopping_item.py
+    owner: root
+    group: root
+    mode: "0755"
+  - src: scripts/clear_meal_prep_week.py
+    dest: config/scripts/clear_meal_prep_week.py
+    owner: root
+    group: root
+    mode: "0755"
+  - src: scripts/close_todoist_task.py
+    dest: config/scripts/close_todoist_task.py
+    owner: root
+    group: root
+    mode: "0755"
+  - src: scripts/delete_todoist_task.py
+    dest: config/scripts/delete_todoist_task.py
+    owner: root
+    group: root
+    mode: "0755"
+  - src: scripts/meal_prep.py
+    dest: config/scripts/meal_prep.py
+    owner: root
+    group: root
+    mode: "0755"
+  - src: scripts/overdue_tasks.py
+    dest: config/scripts/overdue_tasks.py
+    owner: root
+    group: root
+    mode: "0755"
+  - src: scripts/shopping_list.py
+    dest: config/scripts/shopping_list.py
+    owner: root
+    group: root
+    mode: "0755"
+  - src: scripts/today_tasks.py
+    dest: config/scripts/today_tasks.py
+    owner: root
+    group: root
+    mode: "0755"
+  - src: scripts/todoist_lib.py
+    dest: config/scripts/todoist_lib.py
+    owner: root
+    group: root
+    mode: "0755"

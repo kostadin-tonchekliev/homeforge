@@ -44,8 +44,8 @@
   ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ compose_app_dir }}/{{ item.dest }}"
-    owner: "{{ homeserver_user }}"
-    group: "{{ homeserver_user }}"
+    owner: "{{ item.owner | default(homeserver_user) }}"
+    group: "{{ item.group | default(homeserver_user) }}"
     mode: "{{ item.mode | default('0644') }}"
   loop: "{{ compose_app_templates }}"
   loop_control:
@@ -56,8 +56,8 @@
   ansible.builtin.copy:
     src: "{{ item.src }}"
     dest: "{{ compose_app_dir }}/{{ item.dest }}"
-    owner: "{{ homeserver_user }}"
-    group: "{{ homeserver_user }}"
+    owner: "{{ item.owner | default(homeserver_user) }}"
+    group: "{{ item.group | default(homeserver_user) }}"
     mode: "{{ item.mode | default('0644') }}"
   loop: "{{ compose_app_files }}"
   loop_control:

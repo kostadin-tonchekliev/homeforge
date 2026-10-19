@@ -11,7 +11,7 @@ docker_networks:
   # Everything Caddy reverse-proxies. Caddy is pinned at .2 (the trusted proxy IP for
   # Jellyfin, GitLab and HA), so dynamic addresses come from the upper half only.
   - name: proxy
-    subnet: 10.40.0.0/24
+    subnet: "{{ homeserver_proxy_subnet }}"
     iprange: 10.40.0.128/25
     gateway: 10.40.0.1
     internal: false

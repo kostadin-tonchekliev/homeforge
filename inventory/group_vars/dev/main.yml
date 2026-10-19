@@ -23,3 +23,29 @@ postgres_app_passwords:
   sonarr: dev-sonarr
 
 grafana_db_password: dev-grafana
+
+# Homepage widgets can't authenticate in the sandbox (fresh apps have other keys); that's fine
+homepage_widget_keys:
+  jellyfin: dev-key
+  jellystat: dev-key
+  audiobookshelf: dev-key
+  kavita: dev-key
+  sonarr: dev-key
+  radarr: dev-key
+  prowlarr: dev-key
+  dockhand: dev-key
+  home_assistant: dev-key
+  gitlab: dev-key
+deluge_web_password: deluge
+
+esphome_password: dev-esphome
+
+home_assistant_secrets:
+  some_password: dev
+  todoist_token: dev
+  caldav_username: dev
+  caldav_password: dev
+
+gitlab_runner_tokens:
+  runner-1: dev-not-registered
+  runner-2: dev-not-registered

@@ -1,13 +1,16 @@
 ---
-# Registry of the web services behind Caddy, keyed by service id. The Caddyfile
-# (roles/caddy) and the Homepage dashboard (roles/homepage) are both generated from it;
-# each of those roles decides the order and grouping in its own defaults.
+# Registry of the web services, keyed by service id. The Caddyfile (roles/caddy) and the
+# Homepage dashboard (roles/homepage) are both generated from it; each of those roles
+# decides the order and grouping in its own defaults (caddy_sections, homepage_groups).
 #
 #   subdomain         https://<subdomain>.<homeserver_domain>; "" means the bare domain
 #   upstream          where Caddy proxies to: <container>:<port> on the proxy network,
 #                     or host.docker.internal:<port> for services running on the host
 #   caddy_matcher     name of the Caddy matcher (default: the subdomain)
 #   caddy_directives  extra Caddy directives placed before reverse_proxy
+#   tile              the Homepage tile: name, plus any Homepage service options (icon,
+#                     description, container, widget...). href defaults to the service URL;
+#                     container implies the "my-docker" status server.
 homelab_services:
   homepage:
     subdomain: ""
@@ -16,59 +19,219 @@ homelab_services:
   jellyfin:
     subdomain: jellyfin
     upstream: host.docker.internal:8096
+    tile:
+      name: Jellyfin
+      icon: jellyfin
+      widget:
+        type: jellyfin
+        url: http://host.docker.internal:8096
+        key: "{{ homepage_widget_keys.jellyfin }}"
+        version: 2
   jellystat:
     subdomain: jellystat
     upstream: jellystat:3000
+    tile:
+      name: Jellystat
+      icon: jellystat
+      container: jellystat
+      widget:
+        type: jellystat
+        url: http://jellystat:3000
+        key: "{{ homepage_widget_keys.jellystat }}"
   audiobookshelf:
     subdomain: abs
     upstream: audiobookshelf:80
+    tile:
+      name: Audiobookshelf
+      icon: audiobookshelf
+      container: audiobookshelf
+      widget:
+        type: audiobookshelf
+        url: http://audiobookshelf:80
+        key: "{{ homepage_widget_keys.audiobookshelf }}"
   kavita:
     subdomain: kavita
     upstream: kavita:5000
+    tile:
+      name: Kavita
+      icon: kavita
+      container: kavita
+      widget:
+        type: kavita
+        url: http://kavita:5000
+        key: "{{ homepage_widget_keys.kavita }}"
   sonarr:
     subdomain: sonarr
     upstream: sonarr:8989
+    tile:
+      name: Sonarr
+      icon: sonarr
+      container: sonarr
+      widget:
+        type: sonarr
+        url: http://sonarr:8989
+        key: "{{ homepage_widget_keys.sonarr }}"
   radarr:
     subdomain: radarr
     upstream: radarr:7878
+    tile:
+      name: Radarr
+      icon: radarr
+      container: radarr
+      widget:
+        type: radarr
+        url: http://radarr:7878
+        key: "{{ homepage_widget_keys.radarr }}"
   prowlarr:
     subdomain: prowlarr
     upstream: prowlarr:9696
+    tile:
+      name: Prowlarr
+      icon: prowlarr
+      container: prowlarr
+      widget:
+        type: prowlarr
+        url: http://prowlarr:9696
+        key: "{{ homepage_widget_keys.prowlarr }}"
   deluge:
     subdomain: deluge
     upstream: deluge:8112
+    tile:
+      name: Deluge
+      icon: deluge
+      container: deluge
+      widget:
+        type: deluge
+        url: http://deluge:8112
+        password: "{{ deluge_web_password }}"
+  dockhand:
+    subdomain: dockhand
+    upstream: dockhand:3000
+    tile:
+      name: Dockhand
+      icon: dockhand
+      container: dockhand
+      widget:
+        type: dockhand
+        url: http://dockhand:3000
+        key: "{{ homepage_widget_keys.dockhand }}"
+  caddy:
+    tile:
+      name: Caddy
+      href: "https://{{ homeserver_domain }}"
+      icon: caddy
+      description: "Reverse proxy + HTTPS for *.{{ homeserver_domain }}"
+      container: caddy
+      widget:
+        type: caddy
+        # Read-only admin window (only GET /reverse_proxy/upstreams), see /opt/caddy/conf/Caddyfile
+        url: http://caddy:2020
+  pihole:
+    subdomain: pihole
+    upstream: pihole:80
+    caddy_directives:
+      - redir / /admin/
+    tile:
+      name: Pi-hole
+      icon: pi-hole
+      description: LAN DNS + ad blocking
+      container: pihole
+      widget:
+        type: pihole
+        url: http://pihole:80
+        version: 6
+        # Substituted by Homepage itself from the HOMEPAGE_VAR_* in /opt/gethomepage/.env
+        key: "{% raw %}{{HOMEPAGE_VAR_PIHOLE_PASSWORD}}{% endraw %}"
+  ntopng:
+    subdomain: ntopng
+    upstream: host.docker.internal:3010
+    tile:
+      name: ntopng
+      icon: ntop
+      description: Who is connecting to the server
+      container: ntopng
+  postgres:
+    tile:
+      name: PostgreSQL
+      href: "https://grafana.{{ homeserver_domain }}/d/postgres-homelab/postgresql"
+      icon: postgres
+      description: Shared DB for GitLab, Home Assistant, *arr, Grafana, Jellystat, Open WebUI
+      container: postgres
+  postgres_exporter:
+    tile:
+      name: postgres-exporter
+      href: "https://prometheus.{{ homeserver_domain }}/targets"
+      icon: prometheus
+      description: PostgreSQL metrics for Prometheus / Grafana
+      container: postgres-exporter
   grafana:
     subdomain: grafana
     upstream: host.docker.internal:3000
+    tile:
+      name: Grafana
+      icon: grafana
   prometheus:
     subdomain: prometheus
     upstream: host.docker.internal:9090
+    tile:
+      name: Prometheus
+      icon: prometheus
+      widget:
+        type: prometheus
+        url: http://host.docker.internal:9090
   cadvisor:
     subdomain: cadvisor
     upstream: cadvisor:8080
   uptime_kuma:
     subdomain: uptime
     upstream: uptime-kuma:3001
-  ntopng:
-    subdomain: ntopng
-    upstream: host.docker.internal:3010
+    tile:
+      name: Uptime Kuma
+      icon: uptime-kuma
+      container: uptime-kuma
+      widget:
+        type: uptimekuma
+        url: http://uptime-kuma:3001
+        slug: home-lab
   home_assistant:
     subdomain: ha
     upstream: host.docker.internal:8123
+    tile:
+      name: Home Assistant
+      icon: home-assistant
+      container: homeassistant
+      widget:
+        type: homeassistant
+        url: http://host.docker.internal:8123
+        key: "{{ homepage_widget_keys.home_assistant }}"
   esphome:
     subdomain: esphome
     upstream: esphome:6052
+    tile:
+      name: ESPHome
+      icon: esphome
+      container: esphome
+      widget:
+        type: esphome
+        url: http://esphome:6052
+        username: "{{ esphome_username }}"
+        password: "{{ esphome_password }}"
   open_webui:
     subdomain: ai
     upstream: open-webui:8080
+    tile:
+      name: Open Webui
+      icon: open-webui
+      container: open-webui
   gitlab:
     subdomain: gitlab
     upstream: gitlab:80
-  dockhand:
-    subdomain: dockhand
-    upstream: dockhand:3000
-  pihole:
-    subdomain: pihole
-    upstream: pihole:80
-    caddy_directives:
-      - redir / /admin/
+    tile:
+      name: Gitlab
+      icon: gitlab
+      container: gitlab
+      widget:
+        type: gitlab
+        url: http://gitlab:80
+        key: "{{ homepage_widget_keys.gitlab }}"
+        user_id: 1

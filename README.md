@@ -117,6 +117,23 @@ Edit the secrets with:
 ansible-vault edit inventory/group_vars/prod/vault.yml --vault-password-file .vault_pass
 ```
 
+## What a rebuild does not cover
+
+The playbooks rebuild packages, compose stacks, config files, networks and the firewall.
+**App state is not managed** and has to come back from your own copies:
+
+- PostgreSQL databases (GitLab, Grafana, Home Assistant history, Sonarr/Radarr/Prowlarr, Jellystat, Open WebUI) — see `/opt/postgres/README.md`
+- Jellyfin's library and users (`/var/lib/jellyfin`, `/etc/jellyfin`)
+- Home Assistant's UI-managed state (`config/.storage`, `automations.yaml`, HACS, `zigbee.db`)
+- GitLab's repositories, uploads and `config/gitlab-secrets.json`
+- The data directories of Kavita, Audiobookshelf, Uptime Kuma, Pi-hole, Deluge, ESPHome, Dockhand, Ollama models
+
+Without that state, a few things need a one-time manual step on a fresh install:
+
+- **Home Assistant:** trust Caddy as a reverse proxy (Settings → System → Network: `use_x_forwarded_for`, trusted proxy `10.40.0.2`). It lives in `.storage/http`, which isn't managed.
+- **Homepage widgets** use the API keys in the vault; new app installs generate new keys, so update `vault_homepage_widget_keys`.
+- **GitLab runners** need re-registering in a new GitLab; put the new tokens in `vault_gitlab_runner_tokens`.
+
 ## Adding a Docker Compose service
 
 Every stack lives in `/opt/<name>` and is deployed by the shared `compose_app` role. A
@@ -184,4 +201,5 @@ ansible-playbook --syntax-check playbooks/*.yml -i inventory/dev.yml
 - [core.yml](playbooks/core.yml) - Core services: Caddy (reverse proxy + TLS, routes generated from `inventory/group_vars/homeserver/services.yml`), Pi-hole (LAN DNS + the `*.home` wildcard), PostgreSQL (shared server, one login + database per app)
 - [media.yml](playbooks/media.yml) - Media: Jellyfin (official APT repo), Deluge, Flaresolverr, Prowlarr, Sonarr, Radarr, Jellystat, Audiobookshelf, Kavita
 - [monitoring.yml](playbooks/monitoring.yml) - Monitoring: Prometheus + node_exporter (`prometheus.prometheus` collection, settings in `inventory/group_vars/homeserver/monitoring.yml`), Grafana (official APT repo, provisioned data sources and dashboards), cAdvisor, Uptime Kuma, ntopng
+- [apps.yml](playbooks/apps.yml) - Apps: Homepage (tiles generated from `services.yml`), Home Assistant (YAML config, secrets and helper scripts), ESPHome, Ollama + Open WebUI, GitLab + runners, Dockhand
 - [base.yml](playbooks/base.yml) - Base host: packages, timezone, users and the `media` group, `/media` (data disk mount in prod), ufw, Docker with its daemon config and shared networks

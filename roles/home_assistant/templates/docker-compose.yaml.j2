@@ -1,0 +1,21 @@
+---
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: "ghcr.io/home-assistant/home-assistant:stable"
+    volumes:
+      - /opt/home-assistant/config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+      - /dev:/dev
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+{% if home_assistant_devices | length > 0 %}
+    devices:
+{% for device in home_assistant_devices %}
+      - {{ device }}:{{ device }}
+{% endfor %}
+{% endif %}
+    environment:
+      TZ: {{ homeserver_timezone }}
