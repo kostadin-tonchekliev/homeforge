@@ -33,22 +33,32 @@
   ansible.builtin.apt:
     name: python3-lxml
     state: present
+  register: jellyfin_lxml
 
-- name: config | Read the trusted reverse proxies
-  community.general.xml:
-    path: /etc/jellyfin/network.xml
-    xpath: /NetworkConfiguration/KnownProxies/string
-    content: text
-  register: jellyfin_current_proxies
-  failed_when: false
-  check_mode: false
+# A --check run can't use the library before it's really installed
+- name: config | Say why the reverse-proxy check is skipped
+  ansible.builtin.debug:
+    msg: "Dry run: python3-lxml isn't installed yet, so the trusted proxies in network.xml aren't checked."
+  when: ansible_check_mode and jellyfin_lxml.changed
 
-- name: config | Trust Caddy as a reverse proxy
-  community.general.xml:
-    path: /etc/jellyfin/network.xml
-    xpath: /NetworkConfiguration/KnownProxies
-    set_children: "{{ jellyfin_known_proxies | map('community.general.dict_kv', 'string') | list }}"
-  when: >-
-    (jellyfin_current_proxies.matches | default([]) | map('dict2items') | flatten
-    | map(attribute='value') | list) != jellyfin_known_proxies
-  notify: Restart jellyfin
+- name: config | Manage the trusted reverse proxies
+  when: not (ansible_check_mode and jellyfin_lxml.changed)
+  block:
+    - name: config | Read the trusted reverse proxies
+      community.general.xml:
+        path: /etc/jellyfin/network.xml
+        xpath: /NetworkConfiguration/KnownProxies/string
+        content: text
+      register: jellyfin_current_proxies
+      failed_when: false
+      check_mode: false
+
+    - name: config | Trust Caddy as a reverse proxy
+      community.general.xml:
+        path: /etc/jellyfin/network.xml
+        xpath: /NetworkConfiguration/KnownProxies
+        set_children: "{{ jellyfin_known_proxies | map('community.general.dict_kv', 'string') | list }}"
+      when: >-
+        (jellyfin_current_proxies.matches | default([]) | map('dict2items') | flatten
+        | map(attribute='value') | list) != jellyfin_known_proxies
+      notify: Restart jellyfin

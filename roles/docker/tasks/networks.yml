@@ -1,12 +1,64 @@
 ---
-- name: networks | Create the shared networks
-  community.docker.docker_network:
-    name: "{{ item.name }}"
-    internal: "{{ item.internal }}"
-    ipam_config:
-      - subnet: "{{ item.subnet }}"
-        gateway: "{{ item.gateway }}"
-        iprange: "{{ item.iprange | default(omit) }}"
+# Plain docker CLI instead of community.docker.docker_network: that module matches a
+# network by name *or ID prefix*, so a short hex-looking name like "db" can match another
+# network whose ID happens to start with "db" (e.g. the built-in host network) and it then
+# tries to recreate that one. The CLI looks up an exact name before an ID prefix.
+
+- name: networks | List the existing networks
+  ansible.builtin.command:
+    argv: [docker, network, ls, --format, "{% raw %}{{.Name}}{% endraw %}"]
+  register: docker_existing_networks
+  changed_when: false
+  check_mode: false
+
+- name: networks | Create the missing shared networks
+  ansible.builtin.command:
+    argv: >-
+      {{ ['docker', 'network', 'create', '--driver', 'bridge',
+          '--subnet', item.subnet, '--gateway', item.gateway]
+         + (['--ip-range', item.iprange] if item.iprange is defined else [])
+         + (['--internal'] if item.internal else [])
+         + [item.name] }}
   loop: "{{ docker_networks }}"
   loop_control:
     label: "{{ item.name }}"
+  when: item.name not in docker_existing_networks.stdout_lines
+  changed_when: true
+
+- name: networks | Read the shared networks' settings
+  ansible.builtin.command:
+    argv: [docker, network, inspect, "{{ item.name }}"]
+  loop: "{{ docker_networks }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: docker_network_inspect
+  changed_when: false
+  check_mode: false
+  failed_when: >-
+    docker_network_inspect.rc != 0
+    and not (ansible_check_mode and item.name not in docker_existing_networks.stdout_lines)
+
+# Recreating a network would disconnect every container on it, so a mismatch is
+# reported for a human to fix instead of being "corrected" automatically
+- name: networks | Check that the existing networks have the expected settings
+  ansible.builtin.assert:
+    that:
+      - network.Name == item.item.name
+      - network.Driver == 'bridge'
+      - network.Internal == item.item.internal
+      - ipam.Subnet == item.item.subnet
+      - ipam.Gateway == item.item.gateway
+      - (ipam.IPRange | default('')) == (item.item.iprange | default(''))
+    fail_msg: >-
+      Docker network {{ item.item.name }} exists with different settings
+      (subnet {{ ipam.Subnet | default('?') }}, gateway {{ ipam.Gateway | default('?') }},
+      ip range {{ ipam.IPRange | default('none') }}, internal {{ network.Internal | default('?') }}).
+      Remove it (docker network rm {{ item.item.name }}, after stopping the containers on it) and re-run.
+    quiet: true
+  vars:
+    network: "{{ (item.stdout | from_json)[0] }}"
+    ipam: "{{ network.IPAM.Config[0] }}"
+  loop: "{{ docker_network_inspect.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: item.rc == 0
