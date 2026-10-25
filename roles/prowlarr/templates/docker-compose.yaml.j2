@@ -9,6 +9,9 @@ services:
       - PUID={{ homeserver_uid }}
       - PGID={{ homeserver_media_gid }}
       - UMASK=002
+      # Hostnames Prowlarr answers to (it refuses others, against DNS rebinding): the Caddy
+      # URL, the container name other apps and Homepage use, and the LAN IP (published port)
+      - PROWLARR__SERVER__ALLOWEDHOSTS={{ homelab_services.prowlarr.subdomain }}.{{ homeserver_domain }},prowlarr,{{ homeserver_lan_ip }}
       - TZ={{ homeserver_timezone }}
       # Database: shared PostgreSQL server (/opt/postgres), password in .env
       - PROWLARR__POSTGRES__HOST=postgres

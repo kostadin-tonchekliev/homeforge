@@ -9,6 +9,9 @@ services:
       - PUID={{ homeserver_uid }}
       - PGID={{ homeserver_media_gid }}
       - UMASK=002
+      # Hostnames Sonarr answers to (it refuses others, against DNS rebinding): the Caddy
+      # URL, the container name other apps and Homepage use, and the LAN IP (published port)
+      - SONARR__SERVER__ALLOWEDHOSTS={{ homelab_services.sonarr.subdomain }}.{{ homeserver_domain }},sonarr,{{ homeserver_lan_ip }}
       - TZ={{ homeserver_timezone }}
       # Database: shared PostgreSQL server (/opt/postgres), password in .env
       - SONARR__POSTGRES__HOST=postgres

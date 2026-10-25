@@ -9,6 +9,9 @@ services:
       - PUID={{ homeserver_uid }}
       - PGID={{ homeserver_media_gid }}
       - UMASK=002
+      # Hostnames Radarr answers to (it refuses others, against DNS rebinding): the Caddy
+      # URL, the container name other apps and Homepage use, and the LAN IP (published port)
+      - RADARR__SERVER__ALLOWEDHOSTS={{ homelab_services.radarr.subdomain }}.{{ homeserver_domain }},radarr,{{ homeserver_lan_ip }}
       - TZ={{ homeserver_timezone }}
       # Database: shared PostgreSQL server (/opt/postgres), password in .env
       - RADARR__POSTGRES__HOST=postgres
