@@ -1,0 +1,39 @@
+---
+# Not created by the base system inside containers (the sandbox); on a real host udev owns it
+- name: deploy | Make sure the render group exists
+  ansible.builtin.group:
+    name: render
+    system: true
+
+- name: deploy | Look up the GPU groups
+  ansible.builtin.getent:
+    database: group
+
+- name: deploy | Remember the GPU group ids for the container
+  ansible.builtin.set_fact:
+    jellyfin_gpu_gids: >-
+      {{ ['video', 'render'] | map('extract', ansible_facts['getent_group'])
+         | map(attribute=1) | list }}
+
+- name: deploy | Deploy the Jellyfin stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: jellyfin
+    compose_app_dirs:
+      - path: data
+        owner: "{{ homeserver_user }}"
+        group: "{{ homeserver_media_group }}"
+        mode: "0775"
+      - path: config
+        owner: "{{ homeserver_user }}"
+        group: "{{ homeserver_media_group }}"
+        mode: "0775"
+      - path: cache
+        owner: "{{ homeserver_user }}"
+        group: "{{ homeserver_media_group }}"
+        mode: "0775"
+      - path: log
+        owner: "{{ homeserver_user }}"
+        group: "{{ homeserver_media_group }}"
+        mode: "0775"

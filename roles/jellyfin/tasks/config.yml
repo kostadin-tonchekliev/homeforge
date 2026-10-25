@@ -1,32 +1,19 @@
 ---
-# Not created by the base system inside containers (the sandbox); on a real host udev owns it
-- name: config | Make sure the render group exists
-  ansible.builtin.group:
-    name: render
-    system: true
-
-- name: config | Add the jellyfin user to the media and GPU groups
-  ansible.builtin.user:
-    name: jellyfin
-    groups: "{{ jellyfin_groups }}"
-    append: true
-  notify: Restart jellyfin
-
 # Jellyfin owns its config files; only the reverse-proxy setting is managed. network.xml
 # only appears once the setup wizard has run, so seed a minimal one (Jellyfin fills in
 # the defaults for everything else and rewrites the file in full on its next save).
 - name: config | Create a minimal network config if Jellyfin hasn't written one yet
   ansible.builtin.copy:
-    dest: /etc/jellyfin/network.xml
+    dest: /opt/jellyfin/config/network.xml
     content: |
       <?xml version="1.0" encoding="utf-8"?>
       <NetworkConfiguration>
         <KnownProxies />
       </NetworkConfiguration>
     force: false
-    owner: jellyfin
-    group: jellyfin
-    mode: "0644"
+    owner: "{{ homeserver_user }}"
+    group: "{{ homeserver_media_group }}"
+    mode: "0664"
   notify: Restart jellyfin
 
 - name: config | Install the XML library used by community.general.xml
@@ -46,7 +33,7 @@
   block:
     - name: config | Read the trusted reverse proxies
       community.general.xml:
-        path: /etc/jellyfin/network.xml
+        path: /opt/jellyfin/config/network.xml
         xpath: /NetworkConfiguration/KnownProxies/string
         content: text
       register: jellyfin_current_proxies
@@ -55,7 +42,7 @@
 
     - name: config | Trust Caddy as a reverse proxy
       community.general.xml:
-        path: /etc/jellyfin/network.xml
+        path: /opt/jellyfin/config/network.xml
         xpath: /NetworkConfiguration/KnownProxies
         set_children: "{{ jellyfin_known_proxies | map('community.general.dict_kv', 'string') | list }}"
       when: >-

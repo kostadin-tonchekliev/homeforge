@@ -15,5 +15,5 @@
     state: directory
     owner: "{{ homeserver_user }}"
     group: "{{ homeserver_media_group }}"
-    mode: "0775"
+    mode: "2775"
   loop: "{{ common_media_dirs }}"

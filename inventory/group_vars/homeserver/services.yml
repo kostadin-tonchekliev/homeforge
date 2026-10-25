@@ -18,10 +18,12 @@ homelab_services:
     upstream: homepage:3000
   jellyfin:
     subdomain: jellyfin
+    # Host networking (see roles/jellyfin)
     upstream: host.docker.internal:8096
     tile:
       name: Jellyfin
       icon: jellyfin
+      container: jellyfin
       widget:
         type: jellyfin
         url: http://host.docker.internal:8096
@@ -166,19 +168,21 @@ homelab_services:
       container: postgres-exporter
   grafana:
     subdomain: grafana
-    upstream: host.docker.internal:3000
+    upstream: grafana:3000
     tile:
       name: Grafana
       icon: grafana
+      container: grafana
   prometheus:
     subdomain: prometheus
-    upstream: host.docker.internal:9090
+    upstream: prometheus:9090
     tile:
       name: Prometheus
       icon: prometheus
+      container: prometheus
       widget:
         type: prometheus
-        url: http://host.docker.internal:9090
+        url: http://prometheus:9090
   cadvisor:
     subdomain: cadvisor
     upstream: cadvisor:8080

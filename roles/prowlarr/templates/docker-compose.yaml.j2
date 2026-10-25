@@ -4,8 +4,11 @@ services:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     environment:
+      # Shared by everything that touches /media (Deluge, Sonarr, Radarr, Jellyfin): the
+      # server user, group media, umask 002 -> files and folders stay group-writable
       - PUID={{ homeserver_uid }}
-      - PGID={{ homeserver_gid }}
+      - PGID={{ homeserver_media_gid }}
+      - UMASK=002
       - TZ={{ homeserver_timezone }}
       # Database: shared PostgreSQL server (/opt/postgres), password in .env
       - PROWLARR__POSTGRES__HOST=postgres

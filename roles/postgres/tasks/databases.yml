@@ -26,6 +26,28 @@
         label: "{{ item.role }}"
       no_log: true
 
+    # Normally created once by init/01-monitoring-role.sh, but that only runs on an empty
+    # data directory; ensure it here too so postgres-exporter can always log in
+    - name: databases | Create the read-only login for postgres-exporter
+      community.postgresql.postgresql_user:
+        name: exporter
+        password: "{{ postgres_exporter_password }}"
+        login_host: 127.0.0.1
+        login_user: postgres
+        login_password: "{{ postgres_password }}"
+      no_log: true
+
+    - name: databases | Let postgres-exporter read the monitoring views
+      community.postgresql.postgresql_membership:
+        memberships:
+          - groups: [pg_monitor]
+            granted_by_any: true
+        target_roles: [exporter]
+        state: present
+        login_host: 127.0.0.1
+        login_user: postgres
+        login_password: "{{ postgres_password }}"
+
     - name: databases | Create the app databases
       community.postgresql.postgresql_db:
         name: "{{ item.1 }}"

@@ -4,8 +4,11 @@ services:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     environment:
-      - PUID=0
-      - PGID=0
+      # Shared by everything that touches /media (Deluge, Sonarr, Radarr, Jellyfin): the
+      # server user, group media, umask 002 -> files and folders stay group-writable
+      - PUID={{ homeserver_uid }}
+      - PGID={{ homeserver_media_gid }}
+      - UMASK=002
       - TZ={{ homeserver_timezone }}
       # Database: shared PostgreSQL server (/opt/postgres), password in .env
       - SONARR__POSTGRES__HOST=postgres

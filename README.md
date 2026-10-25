@@ -42,7 +42,6 @@ disks, devices…) are variables, never `when: env == ...` branches.
 - Python 3.12, 3.13 or 3.14 (what the pinned ansible-core supports; `setup.sh` picks one, or set `PYTHON=`)
 - Docker + the Docker Compose plugin
 - SSH client (`ssh-keygen`)
-- macOS only: Homebrew (`setup.sh` installs GNU tar with it, used to unpack the Prometheus/node_exporter releases)
 
 ## One-time setup
 
@@ -51,7 +50,6 @@ disks, devices…) are variables, never `when: env == ...` branches.
 ```
 
 - creates `.venv` and installs `requirements.txt` into it
-- on macOS, installs GNU tar (`brew install gnu-tar`) if it is missing
 - installs the Ansible collections from `requirements.yml`
 - generates the sandbox SSH keypair (`docker/ssh_keys/ansible_test`)
 - prompts for the path to your real SSH private key for the mini PC and writes it to `inventory/host_vars/bigboy.yml` (gitignored)
@@ -119,13 +117,21 @@ Edit the secrets with:
 ansible-vault edit inventory/group_vars/prod/vault.yml --vault-password-file .vault_pass
 ```
 
+## Media files: one user, one group
+
+Deluge downloads into `/media/deluge`, Sonarr and Radarr hardlink finished downloads into
+`/media/plex/{Series,Movies}`, and Jellyfin reads them and writes subtitles/metadata next to
+them. All four run as the server user (uid 1001) with group `media` (gid 1003) and umask
+002, and the media folders are setgid (`2775`), so every file and folder any of them
+creates is writable by the others. Don't give one of them a different PUID/PGID.
+
 ## What a rebuild does not cover
 
 The playbooks rebuild packages, compose stacks, config files, networks and the firewall.
 **App state is not managed** and has to come back from your own copies:
 
 - PostgreSQL databases (GitLab, Grafana, Home Assistant history, Sonarr/Radarr/Prowlarr, Jellystat, Open WebUI) — see `/opt/postgres/README.md`
-- Jellyfin's library and users (`/var/lib/jellyfin`, `/etc/jellyfin`)
+- Jellyfin's library, users and plugins (`/opt/jellyfin/data`, `/opt/jellyfin/config`)
 - Home Assistant's UI-managed state (`config/.storage`, `automations.yaml`, HACS, `zigbee.db`)
 - GitLab's repositories, uploads and `config/gitlab-secrets.json`
 - The data directories of Kavita, Audiobookshelf, Uptime Kuma, Pi-hole, Deluge, ESPHome, Dockhand, Ollama models
@@ -202,7 +208,7 @@ ansible-playbook --syntax-check playbooks/*.yml -i inventory/dev.yml
 - [update.yml](playbooks/update.yml) - Update in place: `apt dist-upgrade`, pull newer images and recreate the stacks (core services first), rebuild Caddy, prune dangling images. Says when a reboot is needed but never reboots. Takes the same tags as `setup.yml`
 - [setup.yml](playbooks/setup.yml) - Set up everything (imports the playbooks below). Every role is tagged with its own name, e.g. `--tags firewall`
 - [core.yml](playbooks/core.yml) - Core services: Caddy (reverse proxy + TLS, routes generated from `inventory/group_vars/homeserver/services.yml`), Pi-hole (LAN DNS + the `*.home` wildcard), PostgreSQL (shared server, one login + database per app)
-- [media.yml](playbooks/media.yml) - Media: Jellyfin (official APT repo), Deluge, Flaresolverr, Prowlarr, Sonarr, Radarr, Jellystat, Audiobookshelf, Kavita
-- [monitoring.yml](playbooks/monitoring.yml) - Monitoring: Prometheus + node_exporter (`prometheus.prometheus` collection, settings in `inventory/group_vars/homeserver/monitoring.yml`), Grafana (official APT repo, provisioned data sources and dashboards), cAdvisor, Uptime Kuma, ntopng
+- [media.yml](playbooks/media.yml) - Media: Jellyfin, Deluge, Flaresolverr, Prowlarr, Sonarr, Radarr, Jellystat, Audiobookshelf, Kavita
+- [monitoring.yml](playbooks/monitoring.yml) - Monitoring: Prometheus (scrape targets in `roles/prometheus/defaults`), node_exporter, Grafana (provisioned data sources and dashboards), cAdvisor, Uptime Kuma, ntopng
 - [apps.yml](playbooks/apps.yml) - Apps: Homepage (tiles generated from `services.yml`), Home Assistant (YAML config, secrets and helper scripts), ESPHome, Ollama + Open WebUI, GitLab + runners, Dockhand
 - [base.yml](playbooks/base.yml) - Base host: packages, timezone, users and the `media` group, `/media` (data disk mount in prod), ufw, Docker with its daemon config and shared networks

@@ -1,13 +1,11 @@
 ---
 # Update everything in place:
-#   1. upgrade the OS packages (Docker, Jellyfin, Grafana, the rest of Ubuntu)
+#   1. upgrade the OS packages (Docker and the rest of Ubuntu)
 #   2. re-run the service playbooks, pulling newer images (and rebuilding Caddy),
 #      so compose recreates whatever changed. Core services go first: the apps
 #      reconnect to PostgreSQL once it's back.
 #   3. clean up the images that are no longer used
-# Prometheus and node_exporter versions come from the prometheus.prometheus collection:
-# bump it in requirements.yml to upgrade them. Pinned images (postgres:17, deluge,
-# esphome) only get the updates their tag allows.
+# Pinned images (postgres:17, deluge, esphome) only get the updates their tag allows.
 #
 #   ansible-playbook playbooks/update.yml                      # everything
 #   ansible-playbook playbooks/update.yml --tags sonarr,radarr # just some stacks

@@ -1,13 +1,6 @@
 ---
-# Installed with the official Prometheus community collection:
-# https://github.com/prometheus-community/ansible
-- name: main | Install and configure node_exporter
+- name: main | Deploy the node_exporter stack
   ansible.builtin.include_role:
-    name: prometheus.prometheus.node_exporter
-
-# The hand-installed unit lived in /usr/lib; the collection's one in /etc takes over
-- name: main | Remove the old hand-installed node_exporter unit
-  ansible.builtin.file:
-    path: /usr/lib/systemd/system/node_exporter.service
-    state: absent
-  notify: Reload systemd
+    name: compose_app
+  vars:
+    compose_app_name: node_exporter

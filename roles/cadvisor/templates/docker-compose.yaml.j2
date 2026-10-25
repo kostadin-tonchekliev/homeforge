@@ -3,9 +3,7 @@ services:
   cadvisor:
     container_name: cadvisor
     image: gcr.io/cadvisor/cadvisor:latest
-    # Localhost only: Prometheus scrapes localhost:8080, the UI goes through Caddy
-    ports:
-      - "127.0.0.1:8080:8080"
+    # No published port: Prometheus scrapes cadvisor:8080, the UI goes through Caddy
     volumes:
       - "/:/rootfs"
       - "/var/run:/var/run"

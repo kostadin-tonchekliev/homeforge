@@ -1,0 +1,28 @@
+---
+services:
+  prometheus:
+    image: {{ prometheus_image }}
+    container_name: prometheus
+    # No published port: reached through Caddy at https://prometheus.{{ homeserver_domain }}
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time={{ prometheus_storage_retention }}
+      - --web.enable-lifecycle
+    volumes:
+      # Folder mount so a new prometheus.yml is seen on reload without recreating
+      - /opt/prometheus/config:/etc/prometheus:ro
+      - /opt/prometheus/data:/prometheus
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks:
+      # proxy: Caddy, Grafana, cAdvisor and Caddy's metrics; db: postgres-exporter
+      - proxy
+      - db
+    restart: unless-stopped
+
+networks:
+   proxy:
+     external: true
+   db:
+     external: true
