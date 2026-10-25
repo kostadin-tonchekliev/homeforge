@@ -32,3 +32,5 @@ home_assistant_devices:
 home_assistant_secrets: "{{ vault_home_assistant_secrets }}"
 
 gitlab_runner_tokens: "{{ vault_gitlab_runner_tokens }}"
+
+jellystat_jwt_secret: "{{ vault_jellystat_jwt_secret }}"

@@ -8,3 +8,4 @@
       - path: data
     compose_app_env:
       POSTGRES_PASSWORD: "{{ postgres_app_passwords['jellystat'] }}"
+      JWT_SECRET: "{{ jellystat_jwt_secret }}"

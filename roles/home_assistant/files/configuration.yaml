@@ -16,7 +16,6 @@ recorder:
 wake_on_lan:
 
 shell_command:
-  wol_lg_tv: python3 /config/wol_lg_tv.py
   # section_id is plain; content is base64 so spaces/special chars stay shell-safe.
   todoist_add_shopping_item: python3 /config/scripts/add_shopping_item.py {{ section_id }} {{ content | base64_encode }} {{ project_id }}
   todoist_add_meal_prep_item: python3 /config/scripts/add_meal_prep_item.py {{ section_id }} {{ meal_type }} {{ content | base64_encode }} {{ project_id }}

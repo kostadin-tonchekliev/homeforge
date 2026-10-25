@@ -16,7 +16,8 @@ services:
       POSTGRES_IP: postgres
       POSTGRES_PORT: 5432
       POSTGRES_DB: jfstat
-      JWT_SECRET: "my-secret-jwt-key"
+      # Signs Jellystat login sessions; from the vault, via .env
+      JWT_SECRET: ${JWT_SECRET}
       TZ: {{ homeserver_timezone }} # timezone (ex: Europe/Paris)
     volumes:
       - /opt/jellystat/data:/app/backend/backup-data

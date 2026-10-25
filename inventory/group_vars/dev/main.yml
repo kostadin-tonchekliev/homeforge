@@ -50,5 +50,7 @@ gitlab_runner_tokens:
   runner-1: dev-not-registered
   runner-2: dev-not-registered
 
+jellystat_jwt_secret: dev-jellystat-jwt
+
 # Nested Docker refuses rslave mounts of /
 node_exporter_rootfs_propagation: ""

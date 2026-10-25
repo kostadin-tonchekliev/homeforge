@@ -15,11 +15,6 @@ home_assistant_files:
   - src: configuration.yaml
     dest: config/configuration.yaml
     mode: "0644"
-  - src: wol_lg_tv.py
-    dest: config/wol_lg_tv.py
-    owner: root
-    group: root
-    mode: "0644"
   - src: scripts/add_meal_prep_item.py
     dest: config/scripts/add_meal_prep_item.py
     owner: root
