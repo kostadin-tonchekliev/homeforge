@@ -1,0 +1,2 @@
+# Managed by Ansible (homeforge, roles/prometheus)
+{{ {'global': prometheus_global, 'scrape_configs': prometheus_scrape_configs} | to_nice_yaml(indent=2, sort_keys=false) }}

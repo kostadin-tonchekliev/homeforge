@@ -14,8 +14,13 @@ services:
       - /run/lock
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      # Docker-in-Docker: the inner image/container storage can't live on the container's own
+      # overlayfs (Docker 29 keeps images in containerd's store, so both dirs need a volume)
+      - noble-docker:/var/lib/docker
+      - noble-containerd:/var/lib/containerd
     ports:
-      - "2222:22"
+      # Localhost only: the sandbox key is not a secret, so never expose sshd to the LAN
+      - "127.0.0.1:2222:22"
   test-ubuntu-resolute:
     build:
       context: .
@@ -29,5 +34,16 @@ services:
       - /run/lock
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      # Docker-in-Docker: the inner image/container storage can't live on the container's own
+      # overlayfs (Docker 29 keeps images in containerd's store, so both dirs need a volume)
+      - resolute-docker:/var/lib/docker
+      - resolute-containerd:/var/lib/containerd
     ports:
-      - "2223:22"
+      # Localhost only: the sandbox key is not a secret, so never expose sshd to the LAN
+      - "127.0.0.1:2223:22"
+
+volumes:
+  noble-docker:
+  noble-containerd:
+  resolute-docker:
+  resolute-containerd:

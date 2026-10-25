@@ -1,0 +1,39 @@
+---
+services:
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      # Shared by everything that touches /media (Deluge, Sonarr, Radarr, Jellyfin): the
+      # server user, group media, umask 002 -> files and folders stay group-writable
+      - PUID={{ homeserver_uid }}
+      - PGID={{ homeserver_media_gid }}
+      - UMASK=002
+      # Hostnames Prowlarr answers to (it refuses others, against DNS rebinding): the Caddy
+      # URL, the container name other apps and Homepage use, and the LAN IP (published port)
+      - PROWLARR__SERVER__ALLOWEDHOSTS={{ homelab_services.prowlarr.subdomain }}.{{ homeserver_domain }},prowlarr,{{ homeserver_lan_ip }}
+      - TZ={{ homeserver_timezone }}
+      # Database: shared PostgreSQL server (/opt/postgres), password in .env
+      - PROWLARR__POSTGRES__HOST=postgres
+      - PROWLARR__POSTGRES__PORT=5432
+      - PROWLARR__POSTGRES__USER=prowlarr
+      - PROWLARR__POSTGRES__PASSWORD=${POSTGRES_PASSWORD}
+      - PROWLARR__POSTGRES__MAINDB=prowlarr-main
+      - PROWLARR__POSTGRES__LOGDB=prowlarr-log
+    volumes:
+      - /opt/prowlarr/config:/config
+    ports:
+      - 9696:9696
+    networks:
+      - arr_network
+      - proxy
+      - db
+    restart: unless-stopped
+
+networks:
+   arr_network:
+     external: true
+   proxy:
+     external: true
+   db:
+     external: true

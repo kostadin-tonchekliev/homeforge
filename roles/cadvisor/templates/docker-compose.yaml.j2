@@ -1,0 +1,19 @@
+---
+services:
+  cadvisor:
+    container_name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:latest
+    # No published port: Prometheus scrapes cadvisor:8080, the UI goes through Caddy
+    volumes:
+      - "/:/rootfs"
+      - "/var/run:/var/run"
+      - "/sys:/sys"
+      - "/var/lib/docker/:/var/lib/docker"
+      - "/dev/disk/:/dev/disk"
+    networks:
+      - proxy
+    restart: unless-stopped
+
+networks:
+   proxy:
+     external: true

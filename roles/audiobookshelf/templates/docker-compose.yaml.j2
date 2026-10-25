@@ -1,0 +1,22 @@
+---
+services:
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    ports:
+      - 13378:80
+    volumes:
+      - /opt/audiobookshelf/data/audiobooks:/audiobooks
+      - /opt/audiobookshelf/data/podcasts:/podcasts
+      - /opt/audiobookshelf/config:/config
+      - /opt/audiobookshelf/data/metadata:/metadata
+    environment:
+      - TZ={{ homeserver_timezone }}
+    networks:
+      - proxy
+    restart: unless-stopped
+
+networks:
+   proxy:
+     external: true
+

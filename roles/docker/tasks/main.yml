@@ -1,3 +1,9 @@
 ---
 - name: main | Run the initial setup
   ansible.builtin.include_tasks: setup.yml
+
+- name: main | Configure the Docker daemon and users
+  ansible.builtin.include_tasks: config.yml
+
+- name: main | Create the shared Docker networks
+  ansible.builtin.include_tasks: networks.yml

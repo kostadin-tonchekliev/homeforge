@@ -1,0 +1,11 @@
+---
+- name: main | Deploy the Pi-hole stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: pihole
+    compose_app_compose_mode: "0644"
+    compose_app_dirs:
+      - path: etc-pihole
+    compose_app_env:
+      PIHOLE_PASSWORD: "{{ pihole_password }}"

@@ -1,0 +1,16 @@
+---
+- name: Apps (dashboard, home automation, AI, GitLab, Docker UI)
+  hosts: homeserver
+  roles:
+    - role: homepage
+      tags: [homepage]
+    - role: home_assistant
+      tags: [home_assistant]
+    - role: esphome
+      tags: [esphome]
+    - role: ollama
+      tags: [ollama]
+    - role: gitlab
+      tags: [gitlab]
+    - role: dockhand
+      tags: [dockhand]

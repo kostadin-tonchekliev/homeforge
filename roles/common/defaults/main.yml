@@ -1,6 +1,20 @@
 ---
 common_packages:
+  - acl
   - ca-certificates
   - curl
   - git
+  - gnupg
   - vim
+
+# UUID of the data disk mounted at /media. Unset (sandbox): /media is a plain directory.
+common_media_disk_uuid: ""
+
+# Media library layout. Deluge, Sonarr, Radarr and Jellyfin all run as the server user with
+# group media; setgid (2775) keeps everything created inside in group media.
+common_media_dirs:
+  - /media/plex
+  - /media/plex/Movies
+  - /media/plex/Series
+  - /media/deluge
+  - /media/reading

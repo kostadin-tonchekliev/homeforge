@@ -1,0 +1,19 @@
+---
+- name: media | Mount the data disk at /media
+  ansible.posix.mount:
+    path: /media
+    src: "UUID={{ common_media_disk_uuid }}"
+    fstype: ext4
+    opts: defaults
+    passno: "2"
+    state: mounted
+  when: common_media_disk_uuid | length > 0
+
+- name: media | Create the media library directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ homeserver_user }}"
+    group: "{{ homeserver_media_group }}"
+    mode: "2775"
+  loop: "{{ common_media_dirs }}"

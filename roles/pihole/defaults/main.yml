@@ -1,0 +1,5 @@
+---
+pihole_password: ""
+pihole_dns_upstreams:
+  - 1.1.1.1
+  - 9.9.9.9

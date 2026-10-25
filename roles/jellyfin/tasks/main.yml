@@ -1,0 +1,6 @@
+---
+- name: main | Deploy Jellyfin
+  ansible.builtin.include_tasks: deploy.yml
+
+- name: main | Configure Jellyfin
+  ansible.builtin.include_tasks: config.yml

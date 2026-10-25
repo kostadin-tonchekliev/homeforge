@@ -1,0 +1,64 @@
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+# History database: shared PostgreSQL server (see /opt/postgres/README.md)
+recorder:
+  db_url: !secret recorder_db_url
+
+wake_on_lan:
+
+shell_command:
+  # section_id is plain; content is base64 so spaces/special chars stay shell-safe.
+  todoist_add_shopping_item: python3 /config/scripts/add_shopping_item.py {{ section_id }} {{ content | base64_encode }} {{ project_id }}
+  todoist_add_meal_prep_item: python3 /config/scripts/add_meal_prep_item.py {{ section_id }} {{ meal_type }} {{ content | base64_encode }} {{ project_id }}
+  todoist_delete_task: python3 /config/scripts/delete_todoist_task.py {{ task_id }}
+  todoist_close_task: python3 /config/scripts/close_todoist_task.py {{ task_id }}
+  todoist_clear_meal_prep_week: python3 /config/scripts/clear_meal_prep_week.py
+
+command_line:
+  - sensor:
+      name: Todoist Overdue Tasks
+      unique_id: todoist_overdue_tasks
+      command: "python3 /config/scripts/today_tasks.py"
+      scan_interval: 900
+      value_template: "{{ value_json.count }}"
+      json_attributes:
+        - tasks
+        - today_count
+        - overdue_count
+        - today_and_overdue
+
+  - sensor:
+      name: Todoist Shopping List
+      unique_id: todoist_shopping_list
+      command: "python3 /config/scripts/shopping_list.py"
+      scan_interval: 900
+      value_template: "{{ value_json.count }}"
+      json_attributes:
+        - sections
+        - project_id
+
+  - sensor:
+      name: Todoist Meal Prep
+      unique_id: todoist_meal_prep
+      command: "python3 /config/scripts/meal_prep.py"
+      scan_interval: 900
+      value_template: "{{ value_json.count }}"
+      json_attributes:
+        - days
+        - ideas
+        - project_id
+
+calendar:
+  - platform: caldav
+    url: https://caldav.icloud.com
+    username: !secret caldav_username
+    password: !secret caldav_password

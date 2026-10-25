@@ -1,0 +1,11 @@
+---
+- name: main | Deploy the Jellystat stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: jellystat
+    compose_app_dirs:
+      - path: data
+    compose_app_env:
+      POSTGRES_PASSWORD: "{{ postgres_app_passwords['jellystat'] }}"
+      JWT_SECRET: "{{ jellystat_jwt_secret }}"

@@ -4,3 +4,14 @@
     name: "{{ common_packages }}"
     state: present
     update_cache: true
+    cache_valid_time: 3600
+
+- name: main | Set the host timezone
+  community.general.timezone:
+    name: "{{ homeserver_host_timezone }}"
+
+- name: main | Include the user and group setup
+  ansible.builtin.include_tasks: users.yml
+
+- name: main | Include the /media setup
+  ansible.builtin.include_tasks: media.yml

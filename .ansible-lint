@@ -15,3 +15,5 @@ exclude_paths:
   - docker
   - .yamllint
   - .ansible-lint
+  - inventory/group_vars/prod/vault.yml  # Ansible Vault ciphertext
+  - roles/home_assistant/files  # Home Assistant YAML (custom !include tags)

@@ -1,0 +1,65 @@
+---
+# Shared PostgreSQL server for the homelab. One database + login per app.
+# Restore / maintenance instructions: /opt/postgres/README.md
+services:
+  postgres:
+    # Pinned to the major version on purpose: a new major version can't open an older data directory
+    # (upgrades need dump/restore). GitLab requires >= 17.
+    image: {{ postgres_image }}
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      EXPORTER_PASSWORD: ${EXPORTER_PASSWORD}
+      TZ: {{ homeserver_timezone }}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - effective_cache_size=4GB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=256MB
+      - -c
+      - max_connections=200
+      - -c
+      - log_min_duration_statement=2000
+    # Host-only: Home Assistant (host network) and Grafana (systemd) connect via localhost
+    ports:
+      - 127.0.0.1:5432:5432
+    volumes:
+      - /opt/postgres/data:/var/lib/postgresql/data
+      - /opt/postgres/init:/docker-entrypoint-initdb.d:ro
+    shm_size: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+      - db
+    restart: unless-stopped
+
+  # Prometheus metrics -> Grafana "PostgreSQL" dashboard
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    environment:
+      DATA_SOURCE_URI: postgres:5432/postgres?sslmode=disable
+      DATA_SOURCE_USER: exporter
+      DATA_SOURCE_PASS: ${EXPORTER_PASSWORD}
+    # No published port: Prometheus scrapes postgres-exporter:9187 over the db network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - default
+      - db
+    restart: unless-stopped
+
+networks:
+   db:
+     external: true

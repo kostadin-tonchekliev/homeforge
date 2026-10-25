@@ -1,0 +1,12 @@
+---
+- name: users | Create the media group shared by Jellyfin, Deluge and the *arr apps
+  ansible.builtin.group:
+    name: "{{ homeserver_media_group }}"
+    gid: "{{ homeserver_media_gid }}"
+
+- name: users | Create the server user and add it to the media group
+  ansible.builtin.user:
+    name: "{{ homeserver_user }}"
+    shell: /bin/bash
+    groups: "{{ homeserver_media_group }}"
+    append: true

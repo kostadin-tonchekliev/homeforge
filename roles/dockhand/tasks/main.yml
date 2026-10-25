@@ -1,0 +1,8 @@
+---
+- name: main | Deploy the Dockhand stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: dockhand
+    compose_app_dirs:
+      - path: data

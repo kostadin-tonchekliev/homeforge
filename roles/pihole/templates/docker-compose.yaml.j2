@@ -1,0 +1,30 @@
+---
+services:
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    environment:
+      TZ: {{ homeserver_timezone }}
+      FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD}
+      FTLCONF_dns_listeningMode: all
+      FTLCONF_dns_upstreams: {{ pihole_dns_upstreams | join(';') }}
+      # Wildcard: {{ homeserver_domain }} and every subdomain resolve to this server (LAN only)
+      FTLCONF_misc_dnsmasq_lines: address=/{{ homeserver_domain }}/{{ homeserver_lan_ip }}
+      # The host keeps its own clock (systemd-timesyncd)
+      FTLCONF_ntp_ipv4_active: "false"
+      FTLCONF_ntp_ipv6_active: "false"
+      FTLCONF_ntp_sync_active: "false"
+    cap_add:
+      - SYS_NICE
+    ports:
+      - {{ homeserver_lan_ip }}:53:53/tcp
+      - {{ homeserver_lan_ip }}:53:53/udp
+    volumes:
+      - /opt/pihole/etc-pihole:/etc/pihole
+    networks:
+      - proxy
+    restart: unless-stopped
+
+networks:
+   proxy:
+     external: true

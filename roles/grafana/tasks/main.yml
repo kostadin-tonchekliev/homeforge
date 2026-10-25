@@ -1,0 +1,32 @@
+---
+- name: main | Deploy the Grafana stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: grafana
+    compose_app_dirs:
+      - path: data
+        owner: "{{ grafana_container_uid }}"
+        group: root
+        mode: "0755"
+      - path: provisioning
+      - path: provisioning/datasources
+      - path: provisioning/dashboards
+    compose_app_env:
+      GRAFANA_DB_PASSWORD: "{{ grafana_db_password }}"
+    compose_app_templates:
+      - src: datasources.yaml.j2
+        dest: provisioning/datasources/homelab.yaml
+    compose_app_files:
+      - src: dashboards.yaml
+        dest: provisioning/dashboards/homelab.yaml
+
+# The dashboard provider re-reads these files on its own; no restart needed
+- name: main | Copy the dashboards
+  ansible.builtin.copy:
+    src: dashboards/
+    dest: /opt/grafana/data/dashboards/
+    owner: "{{ grafana_container_uid }}"
+    group: root
+    mode: "0644"
+    directory_mode: "0755"

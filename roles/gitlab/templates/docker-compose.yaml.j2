@@ -1,0 +1,69 @@
+---
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    restart: always
+    # Plain hostname: a dotted FQDN here makes Docker DNS answer gitlab.{{ homeserver_domain }}
+    # with the container IP for every container on a shared network, bypassing Caddy
+    hostname: 'gitlab'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab.{{ homeserver_domain }}'
+        # TLS is terminated by Caddy; GitLab's nginx serves plain HTTP on 80 behind it
+        nginx['listen_port'] = 80
+        nginx['listen_https'] = false
+        nginx['proxy_set_headers'] = { "X-Forwarded-Proto" => "https", "X-Forwarded-Ssl" => "on" }
+        nginx['real_ip_trusted_addresses'] = ['{{ homeserver_proxy_subnet }}']
+        nginx['real_ip_header'] = 'X-Forwarded-For'
+        nginx['real_ip_recursive'] = 'on'
+        letsencrypt['enable'] = false
+        gitlab_rails['gitlab_shell_ssh_port'] = 222
+        # Database: shared PostgreSQL server (/opt/postgres), password in .env. Redis stays bundled.
+        postgresql['enable'] = false
+        postgres_exporter['enable'] = false
+        gitlab_rails['db_adapter'] = 'postgresql'
+        gitlab_rails['db_encoding'] = 'unicode'
+        gitlab_rails['db_host'] = 'postgres'
+        gitlab_rails['db_port'] = 5432
+        gitlab_rails['db_database'] = 'gitlabhq_production'
+        gitlab_rails['db_username'] = 'gitlab'
+        gitlab_rails['db_password'] = '${GITLAB_DB_PASSWORD}'
+    ports:
+      - '3003:80'
+      - '222:22'
+    volumes:
+      - '/opt/gitlab/config:/etc/gitlab'
+      - '/opt/gitlab/logs:/var/log/gitlab'
+      - '/opt/gitlab/data:/var/opt/gitlab'
+    shm_size: '256m'
+    networks:
+      - default
+      - proxy
+      - db
+
+  gitlab-runner-1:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner-1
+    restart: always
+    depends_on:
+      - gitlab
+    volumes:
+      - '/opt/gitlab/runners/runner-1/config:/etc/gitlab-runner'
+      - '/var/run/docker.sock:/var/run/docker.sock'
+
+  gitlab-runner-2:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner-2
+    restart: always
+    depends_on:
+      - gitlab
+    volumes:
+      - '/opt/gitlab/runners/runner-2/config:/etc/gitlab-runner'
+      - '/var/run/docker.sock:/var/run/docker.sock'
+
+networks:
+   proxy:
+     external: true
+   db:
+     external: true

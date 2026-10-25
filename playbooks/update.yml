@@ -1,0 +1,59 @@
+---
+# Update everything in place:
+#   1. upgrade the OS packages (Docker and the rest of Ubuntu)
+#   2. re-run the service playbooks, pulling newer images (and rebuilding Caddy),
+#      so compose recreates whatever changed. Core services go first: the apps
+#      reconnect to PostgreSQL once it's back.
+#   3. clean up the images that are no longer used
+# Pinned images (postgres:17, deluge, esphome) only get the updates their tag allows.
+#
+#   ansible-playbook playbooks/update.yml                      # everything
+#   ansible-playbook playbooks/update.yml --tags sonarr,radarr # just some stacks
+
+- name: Upgrade the system packages
+  hosts: homeserver
+  tags: [packages]
+  tasks:
+    - name: Upgrade all packages
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: true
+        autoremove: true
+
+    - name: Check whether a reboot is needed
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: update_reboot_required
+
+    - name: Say so when a reboot is needed (not done automatically)
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} needs a reboot to finish the upgrade (kernel or core libraries)."
+      when: update_reboot_required.stat.exists
+
+- name: Update the core services
+  ansible.builtin.import_playbook: core.yml
+  vars: &pull_newer
+    compose_app_pull: always
+    compose_app_build: always
+
+- name: Update the media services
+  ansible.builtin.import_playbook: media.yml
+  vars: *pull_newer
+
+- name: Update the monitoring services
+  ansible.builtin.import_playbook: monitoring.yml
+  vars: *pull_newer
+
+- name: Update the apps
+  ansible.builtin.import_playbook: apps.yml
+  vars: *pull_newer
+
+- name: Clean up
+  hosts: homeserver
+  tags: [always]
+  tasks:
+    - name: Remove images no container uses anymore
+      community.docker.docker_prune:
+        images: true
+        images_filters:
+          dangling: true

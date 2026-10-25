@@ -1,0 +1,28 @@
+---
+services:
+  caddy:
+    build: .
+    image: caddy-cloudflare:latest
+    container_name: caddy
+    environment:
+      - TZ={{ homeserver_timezone }}
+      - CF_API_TOKEN=${CF_API_TOKEN}
+    ports:
+      - 80:80
+      - 443:443
+      - 443:443/udp
+    volumes:
+      - /opt/caddy/conf:/etc/caddy:ro  # folder mount so edits to conf/Caddyfile are seen without recreating
+      - /opt/caddy/data:/data
+      - /opt/caddy/config:/config
+      - /opt/caddy/logs:/var/log/caddy
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks:
+      proxy:
+        ipv4_address: {{ homeserver_caddy_ip }}
+    restart: unless-stopped
+
+networks:
+   proxy:
+     external: true

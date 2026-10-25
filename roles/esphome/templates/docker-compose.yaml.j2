@@ -1,0 +1,25 @@
+---
+services:
+  esphome:
+    container_name: esphome
+    image: {{ esphome_image }}
+    volumes:
+      - /opt/esphome/config:/config
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+    ports:
+      - 6052:6052
+      - 6053:6053
+      - 3232:3232
+      - 8266:8266
+    privileged: true
+    environment:
+      - USERNAME={{ esphome_username }}
+      - PASSWORD={{ esphome_password }}
+    networks:
+      - default
+      - proxy
+
+networks:
+   proxy:
+     external: true

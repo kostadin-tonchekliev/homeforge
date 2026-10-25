@@ -1,0 +1,33 @@
+---
+# Vars shared by every environment. Environment-specific values live in
+# group_vars/dev/ and group_vars/prod/ (both child groups of homeserver,
+# so they override anything set here).
+ansible_become: true
+ansible_become_method: sudo
+
+# Debian architecture name of the host, used by the third-party APT repos
+homeserver_deb_arch: "{{ {'x86_64': 'amd64', 'aarch64': 'arm64'}[ansible_facts['architecture']] }}"
+
+# The server's address on the LAN: Pi-hole binds DNS to it and points *.home.<domain> at it
+homeserver_lan_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
+homeserver_lan_subnet: 192.168.1.0/24
+
+# Unprivileged user that owns /opt/<service> and /media, and whose uid/gid the containers run as
+homeserver_user: chonk
+homeserver_media_group: media
+homeserver_media_gid: 1003
+
+# Host clock timezone, and the one passed to containers as TZ
+homeserver_host_timezone: Etc/UTC
+homeserver_timezone: Europe/Sofia
+
+# Domain served by Caddy (LAN only, resolved by Pi-hole)
+homeserver_domain: home.tonchekliev.info
+
+# The "proxy" Docker network that Caddy shares with the services it fronts, and Caddy's
+# fixed address on it: the trusted reverse-proxy IP for Jellyfin, GitLab and HA
+homeserver_proxy_subnet: 10.40.0.0/24
+homeserver_caddy_ip: 10.40.0.2
+
+# ESPHome dashboard login; also used by the Homepage ESPHome widget (password per environment)
+esphome_username: admin

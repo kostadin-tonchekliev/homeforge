@@ -1,0 +1,8 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/latest/configs/docker/
+
+# Container status dots on tiles, via the read-only socket proxy in docker-compose.yaml
+my-docker:
+  host: dockerproxy
+  port: 2375

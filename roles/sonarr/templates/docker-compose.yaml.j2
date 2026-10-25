@@ -1,0 +1,40 @@
+---
+services:
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      # Shared by everything that touches /media (Deluge, Sonarr, Radarr, Jellyfin): the
+      # server user, group media, umask 002 -> files and folders stay group-writable
+      - PUID={{ homeserver_uid }}
+      - PGID={{ homeserver_media_gid }}
+      - UMASK=002
+      # Hostnames Sonarr answers to (it refuses others, against DNS rebinding): the Caddy
+      # URL, the container name other apps and Homepage use, and the LAN IP (published port)
+      - SONARR__SERVER__ALLOWEDHOSTS={{ homelab_services.sonarr.subdomain }}.{{ homeserver_domain }},sonarr,{{ homeserver_lan_ip }}
+      - TZ={{ homeserver_timezone }}
+      # Database: shared PostgreSQL server (/opt/postgres), password in .env
+      - SONARR__POSTGRES__HOST=postgres
+      - SONARR__POSTGRES__PORT=5432
+      - SONARR__POSTGRES__USER=sonarr
+      - SONARR__POSTGRES__PASSWORD=${POSTGRES_PASSWORD}
+      - SONARR__POSTGRES__MAINDB=sonarr-main
+      - SONARR__POSTGRES__LOGDB=sonarr-log
+    volumes:
+      - /opt/sonarr/config:/config
+      - /media:/media
+    ports:
+      - 8989:8989
+    networks:
+      - arr_network
+      - proxy
+      - db
+    restart: unless-stopped
+
+networks:
+   arr_network:
+     external: true
+   proxy:
+     external: true
+   db:
+     external: true

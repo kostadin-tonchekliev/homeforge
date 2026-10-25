@@ -1,0 +1,44 @@
+---
+prometheus_image: prom/prometheus:latest
+
+# The image runs as nobody, which must own the TSDB directory
+prometheus_container_uid: 65534
+
+prometheus_storage_retention: 15d
+
+prometheus_global:
+  scrape_interval: 1s
+  evaluation_interval: 1s
+
+# Targets are reached over the Docker networks (and the host via host.docker.internal).
+# Each one keeps the instance label it had when Prometheus ran on the host, so the history
+# in Grafana continues across the move to containers.
+prometheus_scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+  # node_exporter runs with host networking
+  - job_name: node
+    static_configs:
+      - targets: ["host.docker.internal:9100"]
+        labels:
+          instance: localhost:9100
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          instance: localhost:8080
+  # Caddy's internal-only metrics listener (not published on the host)
+  - job_name: caddy
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["caddy:2020"]
+        labels:
+          instance: "{{ homeserver_caddy_ip }}:2020"
+  # postgres-exporter, over the internal db network
+  - job_name: postgres
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+        labels:
+          instance: 127.0.0.1:9187

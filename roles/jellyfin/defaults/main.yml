@@ -1,0 +1,10 @@
+---
+jellyfin_image: jellyfin/jellyfin:latest
+
+# Devices passed through for hardware transcoding (the Intel iGPU in prod). The image
+# already bundles the Intel media driver and OpenCL runtime, so nothing is needed on the host.
+jellyfin_devices: []
+
+# Reverse proxies whose X-Forwarded-For Jellyfin trusts (Caddy)
+jellyfin_known_proxies:
+  - "{{ homeserver_caddy_ip }}"

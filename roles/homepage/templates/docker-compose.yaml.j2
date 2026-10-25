@@ -1,0 +1,43 @@
+---
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: {{ homeserver_domain }}
+      PUID: {{ homeserver_uid }}
+      PGID: {{ homeserver_gid }}
+    # HOMEPAGE_VAR_* secrets used in services.yaml (e.g. Pi-hole password)
+    env_file: .env
+    # Served by Caddy at https://{{ homeserver_domain }} (port 80 now belongs to Caddy)
+    volumes:
+      - /opt/gethomepage/config:/app/config
+      - /media:/media:ro  # for the disk usage stat in widgets.yaml
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      - dockerproxy
+    networks:
+      - proxy
+      - socket
+    restart: unless-stopped
+
+  # Read-only Docker API for container status dots: only GET /containers is allowed,
+  # so Homepage never holds the raw (root-equivalent) docker socket
+  dockerproxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: homepage-dockerproxy
+    environment:
+      - CONTAINERS=1
+      - POST=0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - socket
+    restart: unless-stopped
+
+networks:
+   proxy:
+     external: true
+   socket:
+     internal: true

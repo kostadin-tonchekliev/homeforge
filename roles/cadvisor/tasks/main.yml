@@ -1,0 +1,6 @@
+---
+- name: main | Deploy the cAdvisor stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: cadvisor

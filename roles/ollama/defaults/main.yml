@@ -1,0 +1,2 @@
+---
+ollama_openwebui_db_password: "{{ postgres_app_passwords['openwebui'] }}"

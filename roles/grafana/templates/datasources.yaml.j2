@@ -1,0 +1,24 @@
+# Data sources (same UIDs as before the move to PostgreSQL, so dashboards keep working).
+# influxdb: InfluxDB on :8086 isn't running; its old password was not carried over.
+apiVersion: 1
+datasources:
+- name: prometheus
+  type: prometheus
+  uid: belryhxaxsu0we
+  url: http://prometheus:9090
+  access: proxy
+  isDefault: true
+  jsonData:
+    httpMethod: POST
+  editable: true
+- name: influxdb
+  type: influxdb
+  uid: aels0a417tse8f
+  url: http://{{ homeserver_lan_ip }}:8086
+  access: proxy
+  isDefault: false
+  jsonData:
+    dbName: bigdump
+  editable: true
+  user: admin
+

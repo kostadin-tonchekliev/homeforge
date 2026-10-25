@@ -1,0 +1,6 @@
+---
+grafana_image: grafana/grafana:latest
+grafana_db_password: ""
+
+# The image runs as this uid (group root), which must own the data directory
+grafana_container_uid: 472

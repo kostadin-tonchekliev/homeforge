@@ -1,0 +1,51 @@
+---
+# Jellyfin owns its config files; only the reverse-proxy setting is managed. network.xml
+# only appears once the setup wizard has run, so seed a minimal one (Jellyfin fills in
+# the defaults for everything else and rewrites the file in full on its next save).
+- name: config | Create a minimal network config if Jellyfin hasn't written one yet
+  ansible.builtin.copy:
+    dest: /opt/jellyfin/config/network.xml
+    content: |
+      <?xml version="1.0" encoding="utf-8"?>
+      <NetworkConfiguration>
+        <KnownProxies />
+      </NetworkConfiguration>
+    force: false
+    owner: "{{ homeserver_user }}"
+    group: "{{ homeserver_media_group }}"
+    mode: "0664"
+  notify: Restart jellyfin
+
+- name: config | Install the XML library used by community.general.xml
+  ansible.builtin.apt:
+    name: python3-lxml
+    state: present
+  register: jellyfin_lxml
+
+# A --check run can't use the library before it's really installed
+- name: config | Say why the reverse-proxy check is skipped
+  ansible.builtin.debug:
+    msg: "Dry run: python3-lxml isn't installed yet, so the trusted proxies in network.xml aren't checked."
+  when: ansible_check_mode and jellyfin_lxml.changed
+
+- name: config | Manage the trusted reverse proxies
+  when: not (ansible_check_mode and jellyfin_lxml.changed)
+  block:
+    - name: config | Read the trusted reverse proxies
+      community.general.xml:
+        path: /opt/jellyfin/config/network.xml
+        xpath: /NetworkConfiguration/KnownProxies/string
+        content: text
+      register: jellyfin_current_proxies
+      failed_when: false
+      check_mode: false
+
+    - name: config | Trust Caddy as a reverse proxy
+      community.general.xml:
+        path: /opt/jellyfin/config/network.xml
+        xpath: /NetworkConfiguration/KnownProxies
+        set_children: "{{ jellyfin_known_proxies | map('community.general.dict_kv', 'string') | list }}"
+      when: >-
+        (jellyfin_current_proxies.matches | default([]) | map('dict2items') | flatten
+        | map(attribute='value') | list) != jellyfin_known_proxies
+      notify: Restart jellyfin

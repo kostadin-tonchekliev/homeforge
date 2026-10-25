@@ -1,0 +1,15 @@
+---
+# As in the official instructions (https://github.com/prometheus/node_exporter#docker):
+# host network and PID namespace, and the host's / mounted read-only, so the metrics
+# describe the host and not the container. Listens on the host's port 9100.
+services:
+  node-exporter:
+    image: {{ node_exporter_image }}
+    container_name: node-exporter
+    command:
+      - --path.rootfs=/host
+    network_mode: host
+    pid: host
+    volumes:
+      - /:/host:ro{{ ',' ~ node_exporter_rootfs_propagation if node_exporter_rootfs_propagation else '' }}
+    restart: unless-stopped

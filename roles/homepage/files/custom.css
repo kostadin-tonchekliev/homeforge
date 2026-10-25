@@ -1,0 +1,560 @@
+/* ==========================================================================
+   BigBoy - "Liquid Glass" theme for Homepage (gethomepage) v2.4.x
+   --------------------------------------------------------------------------
+   Built on Homepage's own hooks: #page_wrapper, #information-widgets,
+   .widget-container, .services-group, .service-card, .service-block, ...
+   custom.css is unlayered while Homepage's Tailwind utilities live in
+   @layer utilities, so plain rules here already win over utility classes.
+   !important is only used where Homepage sets inline styles.
+
+   Sections
+     1. Design tokens
+     2. Background (pure-CSS mesh gradient)
+     3. Glass material (shared)
+     4. Header / info widgets
+     5. Service groups + grid rhythm
+     6. Service cards
+     7. Widget stat blocks + status dots
+     8. Quick launch, footer, misc
+     9. Small screens
+    10. Accessibility + fallbacks
+   ========================================================================== */
+
+
+/* 1. Design tokens -------------------------------------------------------- */
+:root {
+  /* glass fills */
+  --lg-fill: rgba(255, 255, 255, 0.075);
+  --lg-fill-hover: rgba(255, 255, 255, 0.115);
+  --lg-fill-top: rgba(255, 255, 255, 0.11);   /* top of the vertical gradient */
+  --lg-inset: rgba(6, 9, 22, 0.42);            /* darker inset glass (stats) */
+  --lg-solid: rgb(21, 25, 44);                 /* no-blur fallback */
+
+  /* edges + light */
+  --lg-border: rgba(255, 255, 255, 0.13);
+  --lg-border-hover: rgba(255, 255, 255, 0.22);
+  --lg-highlight: rgba(255, 255, 255, 0.24);   /* specular top edge */
+  --lg-blur: blur(22px) saturate(175%);
+
+  /* depth */
+  --lg-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.18),
+    0 6px 16px -6px rgba(0, 0, 0, 0.45),
+    0 22px 44px -18px rgba(0, 0, 0, 0.55);
+  --lg-shadow-hover:
+    0 1px 1px rgba(0, 0, 0, 0.2),
+    0 10px 24px -8px rgba(0, 0, 0, 0.5),
+    0 30px 60px -20px rgba(0, 0, 0, 0.6);
+
+  /* shape (continuous-looking radii, concentric inside cards) */
+  --lg-radius: 22px;
+  --lg-radius-inner: 14px;
+  --lg-radius-capsule: 18px;
+
+  /* type */
+  --lg-text: #f8fafc;
+  --lg-text-2: rgba(226, 232, 240, 0.86);      /* secondary, still AA on glass */
+  --lg-text-3: rgba(203, 213, 225, 0.74);      /* labels */
+  --lg-accent: #93c5fd;
+
+  --lg-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Darker page base under the gradient (also used for overscroll areas). */
+html.dark {
+  --bg-color: 7 9 20;
+  color-scheme: dark;
+}
+
+
+/* 2. Background ----------------------------------------------------------- */
+/* Fixed layer behind everything. Vivid hues, but low lightness so white
+   text on top always has strong contrast. */
+#page_wrapper::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    /* soft vignette keeps edges calm */
+    radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, rgba(2, 3, 10, 0.55) 100%),
+    /* colour field */
+    radial-gradient(ellipse 55% 45% at 10% 6%, rgba(99, 102, 241, 0.55), transparent 65%),
+    radial-gradient(ellipse 45% 40% at 92% 10%, rgba(219, 39, 119, 0.36), transparent 65%),
+    radial-gradient(ellipse 50% 45% at 82% 88%, rgba(13, 148, 136, 0.42), transparent 65%),
+    radial-gradient(ellipse 55% 50% at 8% 92%, rgba(124, 58, 237, 0.42), transparent 65%),
+    radial-gradient(ellipse 40% 35% at 52% 48%, rgba(37, 99, 235, 0.20), transparent 70%),
+    linear-gradient(160deg, #0b1026 0%, #070914 48%, #0c0a1f 100%);
+}
+
+
+/* 3. Glass material (shared by header capsules, cards, dialog) ----------- */
+#information-widgets .widget-container,
+#information-widgets .information-widget-form,
+.service-card,
+#__next dialog {
+  background: linear-gradient(180deg, var(--lg-fill-top), var(--lg-fill));
+  border: 1px solid var(--lg-border);
+  -webkit-backdrop-filter: var(--lg-blur);
+  backdrop-filter: var(--lg-blur);
+  box-shadow: inset 0 1px 0 var(--lg-highlight), var(--lg-shadow);
+}
+
+
+/* 4. Header / info widgets ------------------------------------------------ */
+#information-widgets {
+  color: var(--lg-text);
+  margin-inline: 1.25rem;   /* align capsules with the card grid edges */
+}
+
+#information-widgets .widget-container,
+#information-widgets .information-widget-form {
+  border-radius: var(--lg-radius-capsule);
+  padding: 0.55rem 1rem;
+}
+
+/* Greeting ("BigBoy") reads as the page title. */
+.information-widget-greeting span {
+  color: var(--lg-text);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Resources: crisp labels + accent usage bars. */
+.information-widget-resource .text-xs {
+  color: var(--lg-text-2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.information-widget-resource svg,
+.information-widget-icon {
+  color: var(--lg-text-2);
+}
+
+.resource-usage {
+  background-color: rgba(255, 255, 255, 0.14);
+  height: 0.3rem;
+}
+
+.resource-usage > div {
+  height: 0.3rem;
+  background: linear-gradient(90deg, #818cf8, #38bdf8);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.45);
+}
+
+/* Date/time */
+.information-widget-datetime span {
+  color: var(--lg-text);
+  font-weight: 600;
+}
+
+/* Search: glass capsule wrapping a darker inset field. */
+.information-widget-search > div {
+  height: 2.25rem;
+  margin-block: 0.125rem;
+}
+
+.information-widget-search input {
+  border-radius: 12px;
+  border-color: rgba(255, 255, 255, 0.14);
+  background-color: var(--lg-inset);
+  color: var(--lg-text);
+  font-size: 0.875rem;
+  padding-left: 0.875rem;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.information-widget-search input::placeholder {
+  color: var(--lg-text-3);
+}
+
+.information-widget-search input:focus {
+  border-color: rgba(147, 197, 253, 0.6);
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.22);
+  outline: none;
+}
+
+.information-widget-search button {
+  border-radius: 0 10px 10px 0;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+
+/* 5. Service groups + grid rhythm ----------------------------------------- */
+/* One spacing unit (1rem) between cards horizontally and vertically.
+   Column groups and the 4-column row grids share the same gutters, so
+   they line up on desktop. */
+#layout-groups {
+  margin-inline: 0.75rem;
+}
+
+.services-group {
+  padding: 0.75rem 0.5rem 0.25rem;
+}
+
+/* Column groups keep their grid width instead of stretching when a group
+   ends up alone on a line (e.g. Database), so the columns stay aligned. */
+.services-group[class*="md:basis-1/2"] {
+  flex-grow: 0;
+}
+
+/* Between 1024px and 1279px a 4-across grid is too narrow for 4 stat
+   blocks per card; use 2 across there (same as tablet). */
+@media (min-width: 64rem) and (max-width: 79.99rem) {
+  .services-list.lg\:grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.services-list.grid {
+  column-gap: 1rem;
+}
+
+/* Group header: bold, bright, with a small glass chip around the icon. */
+.services-group > button {
+  gap: 0.15rem;
+  padding-inline: 0.125rem;
+}
+
+.service-group-name {
+  color: var(--lg-text);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.service-group-icon {
+  width: 1.85rem;
+  height: 1.85rem;
+  padding: 0.35rem;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.services-group > button svg {
+  color: var(--lg-text-2);
+}
+
+.services-list {
+  margin-top: 0.75rem;
+}
+
+
+/* 6. Service cards -------------------------------------------------------- */
+.service-card {
+  position: relative;
+  isolation: isolate;               /* keeps the sheen layers below text */
+  margin-bottom: 1rem;
+  padding: 0.25rem;
+  border-radius: var(--lg-radius);
+  color: var(--lg-text);
+  transition:
+    transform 0.22s var(--lg-ease),
+    background 0.22s var(--lg-ease),
+    border-color 0.22s var(--lg-ease),
+    box-shadow 0.22s var(--lg-ease);
+}
+
+/* useEqualHeights: Homepage subtracts the stock 0.5rem margin; match ours. */
+.service-card.h-\[calc\(100\%-0\.5rem\)\] {
+  height: calc(100% - 1rem);
+}
+
+/* Specular sheen: light falling on the top of the glass. */
+.service-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 60% at 15% -10%, rgba(255, 255, 255, 0.14), transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 45%);
+}
+
+.service-card:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15), var(--lg-fill-hover));
+  border-color: var(--lg-border-hover);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), var(--lg-shadow-hover);
+  color: var(--lg-text);
+  transform: translateY(-2px);
+}
+
+/* Keyboard focus is clearly visible. */
+.service-card:has(a:focus-visible) {
+  outline: 2px solid var(--lg-accent);
+  outline-offset: 2px;
+}
+
+.service-card a:focus-visible {
+  outline: none;
+}
+
+/* App icon sits on its own small glass tile (squircle-ish). */
+.service-icon {
+  width: 2.875rem;
+  height: 2.875rem;
+  align-self: center;
+  margin: 0.25rem 0.125rem 0.25rem 0.25rem;
+  border-radius: var(--lg-radius-inner);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.04));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.service-title-text {
+  border-radius: 0 var(--lg-radius-inner) var(--lg-radius-inner) 0;
+}
+
+/* Name: bright and medium-bold; leaves room for the status dot. */
+.service-name {
+  color: var(--lg-text);
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: 0.005em;
+  padding: 0.6rem 2.25rem 0.6rem 0.5rem;
+}
+
+/* Description: muted but readable (no thin weights on glass). */
+.service-description {
+  color: var(--lg-text-2);
+  font-size: 0.775rem;
+  font-weight: 500;
+  line-height: 1.35;
+  margin-top: 0.15rem;
+}
+
+
+/* 7. Widget stat blocks + status dots ------------------------------------ */
+/* Darker inset glass so numbers pop against the lighter card. */
+.service-container {
+  padding: 0 0.125rem 0.125rem;
+}
+
+.service-block {
+  margin: 0.25rem;
+  padding: 0.45rem 0.3rem;
+  border-radius: 12px;
+  background-color: var(--lg-inset);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.service-block > div:first-child {   /* value */
+  color: var(--lg-text);
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.service-block > div:last-child {    /* label */
+  color: var(--lg-text-3);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-top: 0.1rem;
+}
+
+/* Widget error box: keep it inside the glass shape. */
+.service-card .service-missing,
+.service-card [class*="bg-rose"] {
+  border-radius: 12px;
+}
+
+/* Status dots: lit "LED" with a glass ring so they read on any card. */
+.service-tags .docker-status {
+  padding: 0.85rem;
+  border-radius: 0 var(--lg-radius) 0 12px;
+}
+
+.docker-status > .rounded-full {
+  width: 0.65rem;
+  height: 0.65rem;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16);
+}
+
+.docker-status .bg-emerald-500 {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16), 0 0 10px rgba(16, 185, 129, 0.85);
+}
+
+.docker-status .bg-orange-400 {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16), 0 0 10px rgba(251, 146, 60, 0.85);
+}
+
+.docker-status .bg-rose-500 {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16), 0 0 10px rgba(244, 63, 94, 0.85);
+}
+
+/* Expanded container stats (click on a dot) use the same inset style. */
+.service-stats .service-block {
+  background-color: rgba(6, 9, 22, 0.5);
+}
+
+
+/* 8. Quick launch, footer, misc ------------------------------------------ */
+#__next dialog {
+  border-radius: var(--lg-radius);
+  overflow: hidden;
+  background: rgba(16, 20, 40, 0.72);
+  color: var(--lg-text);
+}
+
+#__next dialog input {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--lg-text);
+}
+
+#footer {
+  color: var(--lg-text-3);
+}
+
+#footer #revalidate {
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+
+#footer #revalidate:hover {
+  opacity: 1;
+}
+
+::selection {
+  background: rgba(147, 197, 253, 0.35);
+}
+
+
+/* 9. Small screens -------------------------------------------------------- */
+@media (max-width: 639px) {
+  :root {
+    --lg-radius: 20px;
+    --lg-radius-capsule: 16px;
+    --lg-blur: blur(18px) saturate(170%);
+  }
+
+  /* Header capsules stack neatly: title and stats full width, then
+     date + search share one row. */
+  #widgets-wrap > .widget-container,
+  #information-widgets-right {
+    flex: 1 1 100%;
+  }
+
+  #information-widgets-right {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+
+  #information-widgets-right > .widget-container {
+    flex: 0 0 auto;
+  }
+
+  #information-widgets-right > .information-widget-form {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .information-widget-datetime span {
+    font-size: 0.875rem;
+  }
+
+  .information-widget-greeting span {
+    font-size: 1.125rem;
+  }
+
+  #information-widgets .widget-container,
+  #information-widgets .information-widget-form {
+    padding: 0.5rem 0.85rem;
+  }
+
+  #layout-groups {
+    margin-inline: 0.75rem;
+  }
+
+  .services-group {
+    padding: 0.5rem 0.5rem 0;
+  }
+
+  .service-card {
+    margin-bottom: 0.75rem;
+  }
+
+  .service-card.h-\[calc\(100\%-0\.5rem\)\] {
+    height: calc(100% - 0.75rem);
+  }
+
+  .service-block {
+    margin: 0.2rem;
+    padding: 0.4rem 0.2rem;
+  }
+
+  .service-block > div:last-child {
+    font-size: 0.6rem;
+    letter-spacing: 0.04em;
+  }
+}
+
+
+/* 10. Accessibility + fallbacks ------------------------------------------ */
+/* No motion when the user asks for it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .service-card:hover {
+    transform: none;
+  }
+}
+
+/* No backdrop-filter support: solid dark panels instead of see-through ones. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  #information-widgets .widget-container,
+  #information-widgets .information-widget-form,
+  .service-card,
+  #__next dialog {
+    background: var(--lg-solid);
+  }
+
+  .service-card:hover {
+    background: rgb(30, 35, 58);
+  }
+}
+
+/* Users who prefer less transparency or more contrast get opaque glass. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  #information-widgets .widget-container,
+  #information-widgets .information-widget-form,
+  .service-card,
+  #__next dialog {
+    background: var(--lg-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .service-card::before {
+    display: none;
+  }
+
+  .service-card:hover {
+    background: rgb(30, 35, 58);
+  }
+
+  .service-description,
+  .service-block > div:last-child {
+    color: #e2e8f0;
+  }
+}

@@ -1,0 +1,86 @@
+---
+- name: databases | Install the PostgreSQL client library used by community.postgresql
+  ansible.builtin.apt:
+    name: python3-psycopg2
+    state: present
+  register: postgres_psycopg2
+
+# A --check run can't use the library before it's really installed
+- name: databases | Say why the database checks are skipped
+  ansible.builtin.debug:
+    msg: "Dry run: python3-psycopg2 isn't installed yet, so the logins and databases aren't checked."
+  when: ansible_check_mode and postgres_psycopg2.changed
+
+- name: databases | Manage the app logins, databases and extensions
+  when: not (ansible_check_mode and postgres_psycopg2.changed)
+  block:
+    - name: databases | Create the app logins
+      community.postgresql.postgresql_user:
+        name: "{{ item.role }}"
+        password: "{{ postgres_app_passwords[item.role] }}"
+        login_host: 127.0.0.1
+        login_user: postgres
+        login_password: "{{ postgres_password }}"
+      loop: "{{ postgres_apps }}"
+      loop_control:
+        label: "{{ item.role }}"
+      no_log: true
+
+    # Normally created once by init/01-monitoring-role.sh, but that only runs on an empty
+    # data directory; ensure it here too so postgres-exporter can always log in
+    - name: databases | Create the read-only login for postgres-exporter
+      community.postgresql.postgresql_user:
+        name: exporter
+        password: "{{ postgres_exporter_password }}"
+        login_host: 127.0.0.1
+        login_user: postgres
+        login_password: "{{ postgres_password }}"
+      no_log: true
+
+    - name: databases | Let postgres-exporter read the monitoring views
+      community.postgresql.postgresql_membership:
+        memberships:
+          - groups: [pg_monitor]
+            granted_by_any: true
+        target_roles: [exporter]
+        state: present
+        login_host: 127.0.0.1
+        login_user: postgres
+        login_password: "{{ postgres_password }}"
+
+    - name: databases | Create the app databases
+      community.postgresql.postgresql_db:
+        name: "{{ item.1 }}"
+        owner: "{{ item.0.role }}"
+        login_host: 127.0.0.1
+        login_user: postgres
+        login_password: "{{ postgres_password }}"
+      loop: "{{ postgres_apps | subelements('databases') }}"
+      loop_control:
+        label: "{{ item.1 }}"
+
+    - name: databases | Stop other logins from connecting to the app databases
+      community.postgresql.postgresql_privs:
+        login_db: postgres
+        type: database
+        objs: "{{ item.1 }}"
+        privs: CONNECT
+        roles: PUBLIC
+        state: absent
+        login_host: 127.0.0.1
+        login_user: postgres
+        login_password: "{{ postgres_password }}"
+      loop: "{{ postgres_apps | subelements('databases') }}"
+      loop_control:
+        label: "{{ item.1 }}"
+
+    - name: databases | Create the extensions the apps need
+      community.postgresql.postgresql_ext:
+        name: "{{ item.1 }}"
+        login_db: "{{ item.0.databases[0] }}"
+        login_host: 127.0.0.1
+        login_user: postgres
+        login_password: "{{ postgres_password }}"
+      loop: "{{ postgres_apps | subelements('extensions', skip_missing=true) }}"
+      loop_control:
+        label: "{{ item.0.databases[0] }}: {{ item.1 }}"

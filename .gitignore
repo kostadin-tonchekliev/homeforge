@@ -1,0 +1,16 @@
+# Python virtualenv created by setup.sh
+.venv/
+
+# Sandbox SSH keypair, generated locally by setup.sh
+docker/ssh_keys/*
+!docker/ssh_keys/.gitkeep
+
+# Machine-specific settings (e.g. the SSH key path for the real mini PC)
+inventory/host_vars/*
+!inventory/host_vars/.gitkeep
+
+# Ansible Vault password for the production secrets — never commit it
+.vault_pass
+
+# ansible-lint / ansible caches
+.ansible/

@@ -1,0 +1,6 @@
+---
+node_exporter_image: prom/node-exporter:latest
+
+# Mount propagation of the host's / inside the container (the official instructions use
+# rslave so filesystems mounted later show up). Nested Docker (the sandbox) refuses it.
+node_exporter_rootfs_propagation: rslave

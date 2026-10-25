@@ -1,0 +1,32 @@
+---
+services:
+  grafana:
+    image: {{ grafana_image }}
+    container_name: grafana
+    # No published port: reached through Caddy at https://grafana.{{ homeserver_domain }}
+    environment:
+      - TZ={{ homeserver_timezone }}
+      - GF_SERVER_DOMAIN=grafana.{{ homeserver_domain }}
+      - GF_SERVER_ROOT_URL=https://grafana.{{ homeserver_domain }}/
+      # Database: shared PostgreSQL server (/opt/postgres), password in .env
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres:5432
+      - GF_DATABASE_NAME=grafana
+      - GF_DATABASE_USER=grafana
+      - GF_DATABASE_PASSWORD=${GRAFANA_DB_PASSWORD}
+      - GF_DATABASE_SSL_MODE=disable
+      - GF_DATABASE_HIGH_AVAILABILITY=false
+    volumes:
+      # Includes dashboards/, which the dashboard provider reads
+      - /opt/grafana/data:/var/lib/grafana
+      - /opt/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - proxy
+      - db
+    restart: unless-stopped
+
+networks:
+   proxy:
+     external: true
+   db:
+     external: true
