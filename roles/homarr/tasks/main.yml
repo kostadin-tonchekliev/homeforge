@@ -1,0 +1,27 @@
+---
+- name: main | Deploy the Homarr stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: homarr
+    compose_app_dirs:
+      # The entrypoint chowns appdata/ to PUID/PGID itself
+      - path: appdata
+    compose_app_env:
+      SECRET_ENCRYPTION_KEY: "{{ homarr_secret_encryption_key }}"
+      DB_PASSWORD: "{{ postgres_app_passwords['homarr'] }}"
+
+- name: main | Say why the apps and integrations aren't registered
+  ansible.builtin.debug:
+    msg: >-
+      Apps and integrations are not registered:
+      {{ 'a dry run does not call the Homarr API.' if ansible_check_mode else
+      'homarr_api_key is empty. Finish the onboarding, create an API key (Manage → Tools → API)
+      and put it in the vault.' }}
+  when: ansible_check_mode or not homarr_api_key
+
+- name: main | Register the apps and integrations
+  ansible.builtin.include_tasks: integrations.yml
+  when:
+    - not ansible_check_mode
+    - homarr_api_key | length > 0

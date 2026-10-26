@@ -7,7 +7,7 @@ caddy_cf_api_token: ""
 # Order and grouping of the routes in the Caddyfile; ids refer to homelab_services
 caddy_sections:
   - name: Dashboard
-    services: [homepage]
+    services: [homepage, homarr]
   - name: Media
     services: [jellyfin, jellystat, audiobookshelf, kavita]
   - name: PVR / downloads

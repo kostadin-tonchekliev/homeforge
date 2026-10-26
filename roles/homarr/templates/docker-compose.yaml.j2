@@ -1,0 +1,63 @@
+---
+services:
+  homarr:
+    image: ghcr.io/homarr-labs/homarr:latest
+    container_name: homarr
+    restart: unless-stopped
+    environment:
+      TZ: {{ homeserver_timezone }}
+      # The entrypoint chowns /appdata to this user and drops root
+      PUID: {{ homeserver_uid }}
+      PGID: {{ homeserver_gid }}
+      # Encrypts the integration secrets stored in the database; from the vault, via .env.
+      # Never change it: the stored secrets can't be decrypted with another key.
+      SECRET_ENCRYPTION_KEY: ${SECRET_ENCRYPTION_KEY}
+      # Database: shared PostgreSQL server (/opt/postgres), database and login "homarr"
+      DB_DRIVER: node-postgres
+      DB_DIALECT: postgresql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: homarr
+      DB_USER: homarr
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Served by Caddy at https://homarr.{{ homeserver_domain }}; Caddy's address is trusted for the client IP
+      BASE_URL: https://homarr.{{ homeserver_domain }}
+      HOMARR_TRUSTED_PROXIES: {{ homeserver_caddy_ip }}
+      # Container status and the Docker page, via the read-only socket proxy below
+      DOCKER_HOSTNAMES: homarr-dockerproxy
+      DOCKER_PORTS: 2375
+    volumes:
+      - /opt/homarr/appdata:/appdata
+    ports:
+      # Host-only, for Ansible: it registers the apps and integrations through the API
+      - 127.0.0.1:7575:7575
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      - dockerproxy
+    networks:
+      - proxy
+      - db
+      - socket
+
+  # Read-only Docker API: only GET /containers is allowed, so Homarr never holds the raw
+  # (root-equivalent) docker socket and its start/stop buttons are refused
+  dockerproxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: homarr-dockerproxy
+    environment:
+      - CONTAINERS=1
+      - POST=0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - socket
+    restart: unless-stopped
+
+networks:
+  proxy:
+    external: true
+  db:
+    external: true
+  socket:
+    internal: true

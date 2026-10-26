@@ -1,0 +1,106 @@
+---
+# Encrypts the integration secrets in Homarr's database: 64 hex characters (openssl rand -hex 32)
+homarr_secret_encryption_key: ""
+
+# Homarr API key (Manage → Tools → API), used to register the apps and integrations below.
+# It can only be created in the UI after onboarding; while it's empty, that step is skipped.
+homarr_api_key: ""
+
+# Where Ansible reaches Homarr's API: the port published on the server's 127.0.0.1
+homarr_api_url: http://127.0.0.1:7575
+
+# Apps (link tiles) Ansible makes sure exist; ids refer to homelab_services, whose tile gives the
+# name, icon, link and description. Apps and integrations are only ever created, matched by
+# name: changes made in the UI stay, but one deleted there comes back on the next run.
+# Placing them on a board is done in the UI.
+homarr_apps:
+  - jellyfin
+  - jellystat
+  - audiobookshelf
+  - kavita
+  - sonarr
+  - radarr
+  - prowlarr
+  - deluge
+  - dockhand
+  - caddy
+  - pihole
+  - ntopng
+  - postgres
+  - postgres_exporter
+  - grafana
+  - uptime_kuma
+  - prometheus
+  - home_assistant
+  - esphome
+  - open_webui
+  - gitlab
+
+# Integrations (what widgets read from), keyed by the id of the app they belong to:
+#   kind     Homarr's integration kind
+#   url      what Homarr's server calls: container names on the proxy network, like the
+#            Homepage widgets (the Servarr apps only answer to the names in their Allowed Hosts)
+#   secrets  by Homarr secret kind; the same keys the Homepage widgets use
+# Homarr tests the connection before saving one, so a wrong key fails the run.
+homarr_integrations:
+  jellyfin:
+    kind: jellyfin
+    url: http://host.docker.internal:8096
+    secrets:
+      apiKey: "{{ homepage_widget_keys.jellyfin }}"
+  jellystat:
+    kind: jellystat
+    url: http://jellystat:3000
+    secrets:
+      apiKey: "{{ homepage_widget_keys.jellystat }}"
+  audiobookshelf:
+    kind: audiobookshelf
+    url: http://audiobookshelf:80
+    secrets:
+      apiKey: "{{ homepage_widget_keys.audiobookshelf }}"
+  sonarr:
+    kind: sonarr
+    url: http://sonarr:8989
+    secrets:
+      apiKey: "{{ homepage_widget_keys.sonarr }}"
+  radarr:
+    kind: radarr
+    url: http://radarr:7878
+    secrets:
+      apiKey: "{{ homepage_widget_keys.radarr }}"
+  prowlarr:
+    kind: prowlarr
+    url: http://prowlarr:9696
+    secrets:
+      apiKey: "{{ homepage_widget_keys.prowlarr }}"
+  deluge:
+    kind: deluge
+    url: http://deluge:8112
+    secrets:
+      password: "{{ deluge_web_password }}"
+  caddy:
+    kind: caddy
+    # Read-only admin window (only GET /reverse_proxy/upstreams), see roles/caddy
+    url: http://caddy:2020
+    secrets: {}
+  pihole:
+    kind: piHole
+    url: http://pihole:80
+    secrets:
+      # Pi-hole v6 takes the web password as the API key
+      apiKey: "{{ pihole_password }}"
+  prometheus:
+    kind: prometheus
+    url: http://prometheus:9090
+    secrets: {}
+  uptime_kuma:
+    kind: uptimeKuma
+    url: http://uptime-kuma:3001
+    secrets:
+      # The public status page, as in the Homepage widget
+      slug: home-lab
+  home_assistant:
+    kind: homeAssistant
+    url: http://host.docker.internal:8123
+    secrets:
+      apiKey: "{{ homepage_widget_keys.home_assistant }}"
