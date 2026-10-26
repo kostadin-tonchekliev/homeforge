@@ -131,7 +131,7 @@ creates is writable by the others. Don't give one of them a different PUID/PGID.
 The playbooks rebuild packages, compose stacks, config files, networks and the firewall.
 **App state is not managed** and has to come back from your own copies:
 
-- PostgreSQL databases (GitLab, Grafana, Home Assistant history, Sonarr/Radarr/Prowlarr, Jellystat, Open WebUI) — see `/opt/postgres/README.md`
+- PostgreSQL databases (GitLab, Grafana, Home Assistant history, Homarr boards, Sonarr/Radarr/Prowlarr, Jellystat, Open WebUI) — see `/opt/postgres/README.md`
 - Jellyfin's library, users and plugins (`/opt/jellyfin/data`, `/opt/jellyfin/config`)
 - Home Assistant's UI-managed state (`config/.storage`, `automations.yaml`, HACS, `zigbee.db`)
 - GitLab's repositories, uploads and `config/gitlab-secrets.json`
@@ -142,6 +142,7 @@ Without that state, a few things need a one-time manual step on a fresh install:
 - **Home Assistant:** trust Caddy as a reverse proxy (Settings → System → Network: `use_x_forwarded_for`, trusted proxy `10.40.0.2`). It lives in `.storage/http`, which isn't managed.
 - **Homepage widgets** use the API keys in the vault; new app installs generate new keys, so update `vault_homepage_widget_keys`.
 - **GitLab runners** need re-registering in a new GitLab; put the new tokens in `vault_gitlab_runner_tokens`.
+- **Homarr** starts with its onboarding (admin user, first board). Then create an API key (Manage → Tools → API), put it in `vault_homarr_api_key` and run `--tags homarr` again: that registers every app and integration (`homarr_apps`, `homarr_integrations` in `roles/homarr/defaults`). They're only ever created, never changed. The same run lays out the `homelab` board (`homarr_board_sections`) and makes it your home board, but only while that board doesn't exist or is empty: rearrange it in the UI freely, and delete it there to have it laid out again.
 
 ## Adding a Docker Compose service
 
@@ -211,5 +212,5 @@ ansible-playbook --syntax-check playbooks/*.yml -i inventory/dev.yml
 - [core.yml](playbooks/core.yml) - Core services: Caddy (reverse proxy + TLS, routes generated from `inventory/group_vars/homeserver/services.yml`), Pi-hole (LAN DNS + the `*.home` wildcard), PostgreSQL (shared server, one login + database per app)
 - [media.yml](playbooks/media.yml) - Media: Jellyfin, Deluge, Flaresolverr, Prowlarr, Sonarr, Radarr, Jellystat, Audiobookshelf, Kavita
 - [monitoring.yml](playbooks/monitoring.yml) - Monitoring: Prometheus (scrape targets in `roles/prometheus/defaults`), node_exporter, Grafana (provisioned data sources and dashboards), cAdvisor, Uptime Kuma, ntopng
-- [apps.yml](playbooks/apps.yml) - Apps: Homepage (tiles generated from `services.yml`), Home Assistant (YAML config, secrets and helper scripts), ESPHome, Ollama + Open WebUI, GitLab + runners, Dockhand
+- [apps.yml](playbooks/apps.yml) - Apps: Homepage (tiles generated from `services.yml`), Homarr (a dashboard on trial at `homarr.` next to Homepage; apps, integrations and a board set up through its API, see below), Home Assistant (YAML config, secrets and helper scripts), ESPHome, Ollama + Open WebUI, GitLab + runners, Dockhand
 - [base.yml](playbooks/base.yml) - Base host: packages, timezone, users and the `media` group, `/media` (data disk mount in prod), ufw, Docker with its daemon config and shared networks

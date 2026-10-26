@@ -1,0 +1,106 @@
+{#-
+  The body of board.saveBoard: homarr_board_sections laid out on the board just read
+  (homarr_board), in every layout it has (desktop and mobile). Rows are filled left to right
+  and wrap when the next entry doesn't fit: containers on the board, items in a container.
+  homarr_app_ids and homarr_integration_ids map names to Homarr's ids.
+-#}
+{%- set board = homarr_board.json.result.data.json -%}
+{%- set root = board.sections | selectattr('kind', 'eq', 'empty') | selectattr('xOffset', 'eq', 0) | first -%}
+{%- set no_advanced_options = {'title': none, 'customCssClasses': [], 'borderColor': ''} -%}
+
+{#- Each section's entries (apps, then widgets whose integrations exist), with Homarr's ids -#}
+{%- set content = namespace(sections=[]) -%}
+{%- for section in homarr_board_sections -%}
+  {%- set section_id = homarr_board_name ~ '-' ~ loop.index -%}
+  {%- set entries = namespace(list=[]) -%}
+  {%- for app in section.apps | default([]) -%}
+    {%- set entries.list = entries.list + [{
+      'id': section_id ~ '-app-' ~ loop.index, 'kind': 'app', 'width': 1, 'height': 1,
+      'options': {'appId': homarr_app_ids[homelab_services[app].tile.name]}, 'integrationIds': []}] -%}
+  {%- endfor -%}
+  {%- for widget in section.widgets | default([]) -%}
+    {%- set names = namespace(map={}) -%}
+    {%- for id in (widget.stats | default({})).keys() | list + widget.integrations | default([]) -%}
+      {%- set name = homelab_services[id].tile.name -%}
+      {%- if name in homarr_integration_ids -%}
+        {%- set names.map = names.map | combine({id: name}) -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- set options = widget.options | default({}) -%}
+    {%- if widget.stats is defined -%}
+      {%- set stats = namespace(entries=[]) -%}
+      {%- for id, metrics in widget.stats.items() if id in names.map -%}
+        {%- for metric in metrics -%}
+          {%- set stats.entries = stats.entries + [{
+            'id': id ~ '-' ~ metric, 'integrationId': homarr_integration_ids[names.map[id]],
+            'metric': metric, 'label': '', 'hidden': false, 'compact': false}] -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {%- set options = options | combine({'entries': stats.entries}) -%}
+      {%- set complete = stats.entries | length > 0 -%}
+    {%- else -%}
+      {%- set complete = names.map | length == widget.integrations | default([]) | length -%}
+    {%- endif -%}
+    {%- if complete -%}
+      {%- set entries.list = entries.list + [{
+        'id': section_id ~ '-widget-' ~ loop.index, 'kind': widget.kind,
+        'width': widget.width | default(1), 'height': widget.height | default(1), 'options': options,
+        'integrationIds': names.map.values() | map('extract', homarr_integration_ids) | unique | list}] -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- set content.sections = content.sections + [{
+    'id': section_id, 'title': section.title, 'width': section.width | default(homarr_board_columns),
+    'entries': entries.list}] -%}
+{%- endfor -%}
+
+{#- Positions, per layout: placements[<item or section id>] is that layout's list of them -#}
+{%- set placements = namespace(map={}) -%}
+{%- for layout in board.layouts -%}
+  {%- set row = namespace(x=0, y=0, height=0) -%}
+  {%- for section in content.sections -%}
+    {%- set width = [section.width, layout.columnCount] | min -%}
+    {%- set inner = namespace(x=0, y=0, height=0) -%}
+    {%- for entry in section.entries -%}
+      {%- set entry_width = [entry.width, width] | min -%}
+      {%- if inner.x + entry_width > width -%}
+        {%- set inner.y = inner.y + inner.height -%}
+        {%- set inner.x = 0 -%}
+        {%- set inner.height = 0 -%}
+      {%- endif -%}
+      {%- set placements.map = placements.map | combine({entry.id: placements.map[entry.id] | default([]) + [{
+        'layoutId': layout.id, 'sectionId': section.id, 'xOffset': inner.x, 'yOffset': inner.y,
+        'width': entry_width, 'height': entry.height}]}) -%}
+      {%- set inner.x = inner.x + entry_width -%}
+      {%- set inner.height = [inner.height, entry.height] | max -%}
+    {%- endfor -%}
+    {%- set height = [inner.y + inner.height, 1] | max -%}
+    {%- if row.x + width > layout.columnCount -%}
+      {%- set row.y = row.y + row.height -%}
+      {%- set row.x = 0 -%}
+      {%- set row.height = 0 -%}
+    {%- endif -%}
+    {%- set placements.map = placements.map | combine({section.id: placements.map[section.id] | default([]) + [{
+      'layoutId': layout.id, 'parentSectionId': root.id, 'xOffset': row.x, 'yOffset': row.y,
+      'width': width, 'height': height}]}) -%}
+    {%- set row.x = row.x + width -%}
+    {%- set row.height = [row.height, height] | max -%}
+  {%- endfor -%}
+{%- endfor -%}
+
+{%- set result = namespace(sections=[], items=[]) -%}
+{#- The board's own root sections stay: saveBoard deletes every section it isn't sent -#}
+{%- for section in board.sections if section.kind == 'empty' -%}
+  {%- set result.sections = result.sections + [{
+    'id': section.id, 'kind': 'empty', 'xOffset': section.xOffset, 'yOffset': section.yOffset}] -%}
+{%- endfor -%}
+{%- for section in content.sections -%}
+  {%- set result.sections = result.sections + [{
+    'id': section.id, 'kind': 'container', 'collapsed': false, 'options': {'title': section.title},
+    'layouts': placements.map[section.id]}] -%}
+  {%- for entry in section.entries -%}
+    {%- set result.items = result.items + [{
+      'id': entry.id, 'kind': entry.kind, 'options': entry.options, 'integrationIds': entry.integrationIds,
+      'advancedOptions': no_advanced_options, 'layouts': placements.map[entry.id]}] -%}
+  {%- endfor -%}
+{%- endfor -%}
+{{ {'id': board.id, 'sections': result.sections, 'items': result.items} | to_json }}

@@ -1,0 +1,112 @@
+---
+# Lays out homarr_board_sections on a board, through the same tRPC API as integrations.yml.
+# Only while the board doesn't exist or is empty: once it has items, its layout is the UI's.
+
+- name: board | Check that the board only uses known apps and integrations
+  ansible.builtin.assert:
+    that:
+      - homarr_board_apps | difference(homarr_apps) | length == 0
+      - homarr_board_integrations | difference(homarr_integrations.keys()) | length == 0
+    fail_msg: >-
+      Not in homarr_apps: {{ homarr_board_apps | difference(homarr_apps) | join(', ') }};
+      not in homarr_integrations: {{ homarr_board_integrations | difference(homarr_integrations.keys()) | join(', ') }}
+    quiet: true
+  vars:
+    homarr_board_apps: "{{ homarr_board_sections | map(attribute='apps', default=[]) | flatten }}"
+    homarr_board_widgets: "{{ homarr_board_sections | map(attribute='widgets', default=[]) | flatten }}"
+    homarr_board_integrations: >-
+      {{ homarr_board_widgets | map(attribute='integrations', default=[]) | flatten
+      + homarr_board_widgets | map(attribute='stats', default={}) | map('list') | flatten }}
+
+- name: board | Look up the board
+  ansible.builtin.uri:
+    url: "{{ homarr_api_url }}/api/trpc/board.getBoardByName?input={{ homarr_board_input | to_json | urlencode }}"
+    headers:
+      ApiKey: "{{ homarr_api_key }}"
+    status_code: [200, 404]
+  vars:
+    homarr_board_input: {json: {name: "{{ homarr_board_name }}"}}
+  register: homarr_board_found
+  no_log: true
+
+- name: board | Create the board
+  ansible.builtin.uri:
+    url: "{{ homarr_api_url }}/api/trpc/board.createBoard"
+    method: POST
+    headers:
+      ApiKey: "{{ homarr_api_key }}"
+    body_format: json
+    body:
+      json:
+        name: "{{ homarr_board_name }}"
+        columnCount: "{{ homarr_board_columns }}"
+        isPublic: false
+  when: homarr_board_found.status == 404
+  register: homarr_board_created
+  changed_when: true
+  no_log: true
+
+- name: board | Fill the board
+  when: >-
+    homarr_board_found.status == 404
+    or homarr_board_found.json.result.data.json['items'] | length == 0
+  block:
+    # Again, for the layouts and root section of a board just created
+    - name: board | Read the board's layouts
+      ansible.builtin.uri:
+        url: "{{ homarr_api_url }}/api/trpc/board.getBoardByName?input={{ homarr_board_input | to_json | urlencode }}"
+        headers:
+          ApiKey: "{{ homarr_api_key }}"
+      vars:
+        homarr_board_input: {json: {name: "{{ homarr_board_name }}"}}
+      register: homarr_board
+      no_log: true
+
+    - name: board | Look up the integration ids
+      ansible.builtin.uri:
+        url: "{{ homarr_api_url }}/api/trpc/integration.all"
+        headers:
+          ApiKey: "{{ homarr_api_key }}"
+      register: homarr_all_integrations
+      no_log: true
+
+    - name: board | Save the apps and widgets on the board
+      ansible.builtin.uri:
+        url: "{{ homarr_api_url }}/api/trpc/board.saveBoard"
+        method: POST
+        headers:
+          ApiKey: "{{ homarr_api_key }}"
+        body_format: json
+        body:
+          json: "{{ lookup('ansible.builtin.template', 'board.json.j2') | from_json }}"
+      vars:
+        homarr_app_ids: "{{ homarr_all_apps.json.result.data.json | items2dict(key_name='name', value_name='id') }}"
+        homarr_integration_ids: >-
+          {{ homarr_all_integrations.json.result.data.json | items2dict(key_name='name', value_name='id') }}
+      register: homarr_board_saved
+      changed_when: true
+      failed_when: false
+      no_log: true
+
+    # The response holds no secrets, but the task's arguments do
+    - name: board | Check that Homarr saved the board
+      ansible.builtin.assert:
+        that: homarr_board_saved.status == 200
+        fail_msg: >-
+          Homarr refused the board: HTTP {{ homarr_board_saved.status }}
+          {{ homarr_board_saved.json.error.json.message | default('') }}
+        quiet: true
+
+- name: board | Make the board the home board
+  ansible.builtin.uri:
+    url: "{{ homarr_api_url }}/api/trpc/board.setHomeBoard"
+    method: POST
+    headers:
+      ApiKey: "{{ homarr_api_key }}"
+    body_format: json
+    body:
+      json:
+        id: "{{ homarr_board_created.json.result.data.json.boardId }}"
+  when: homarr_board_home and homarr_board_created is changed
+  changed_when: true
+  no_log: true

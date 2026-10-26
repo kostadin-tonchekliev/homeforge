@@ -15,6 +15,8 @@ postgres_apps:
     extensions: [pg_trgm, btree_gist, amcheck]
   - role: grafana
     databases: [grafana]
+  - role: homarr
+    databases: [homarr]
   - role: homeassistant
     databases: [homeassistant]
   - role: jellystat

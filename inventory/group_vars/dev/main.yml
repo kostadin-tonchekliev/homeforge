@@ -15,6 +15,7 @@ postgres_exporter_password: dev-exporter
 postgres_app_passwords:
   gitlab: dev-gitlab
   grafana: dev-grafana
+  homarr: dev-homarr
   homeassistant: dev-homeassistant
   jellystat: dev-jellystat
   openwebui: dev-openwebui
@@ -51,6 +52,11 @@ gitlab_runner_tokens:
   runner-2: dev-not-registered
 
 jellystat_jwt_secret: dev-jellystat-jwt
+
+homarr_secret_encryption_key: "de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7d"
+# No API key: it only exists after the onboarding in the sandbox's Homarr, so the apps and
+# integrations aren't registered there unless one is passed with -e homarr_api_key=...
+homarr_api_key: ""
 
 # Nested Docker refuses rslave mounts of /
 node_exporter_rootfs_propagation: ""

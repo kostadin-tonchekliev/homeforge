@@ -1,0 +1,126 @@
+---
+# Homarr has no config files for apps and integrations: they live in its database. They're
+# created through the tRPC API its own UI uses (/api/trpc/<procedure>, bodies as {"json": ...}),
+# authenticated with the "ApiKey" header. no_log everywhere: the header and bodies hold secrets.
+
+- name: integrations | Check that every integration belongs to an app
+  ansible.builtin.assert:
+    that: homarr_integrations.keys() | difference(homarr_apps) | length == 0
+    fail_msg: "Not in homarr_apps: {{ homarr_integrations.keys() | difference(homarr_apps) | join(', ') }}"
+    quiet: true
+
+- name: integrations | Wait for Homarr to be ready
+  ansible.builtin.uri:
+    url: "{{ homarr_api_url }}/api/health/ready"
+  register: homarr_ready
+  until: homarr_ready.status == 200
+  retries: 30
+  delay: 5
+
+- name: integrations | List the apps and integrations Homarr already has
+  ansible.builtin.uri:
+    url: "{{ homarr_api_url }}/api/trpc/{{ item }}"
+    headers:
+      ApiKey: "{{ homarr_api_key }}"
+  loop: [app.all, integration.all]
+  register: homarr_existing
+  failed_when: false
+  no_log: true
+
+- name: integrations | Check that the API key was accepted
+  ansible.builtin.assert:
+    that: homarr_existing.results | rejectattr('status', 'eq', 200) | length == 0
+    fail_msg: >-
+      Homarr API: HTTP {{ homarr_existing.results | map(attribute='status') | join('/') }}.
+      Is homarr_api_key an API key of an admin, from this Homarr's database?
+    quiet: true
+
+- name: integrations | Remember which apps and integrations exist
+  ansible.builtin.set_fact:
+    homarr_existing_apps: "{{ homarr_existing.results[0].json.result.data.json | map(attribute='name') }}"
+    homarr_existing_integrations: "{{ homarr_existing.results[1].json.result.data.json | map(attribute='name') }}"
+
+- name: integrations | Create the missing apps
+  ansible.builtin.uri:
+    url: "{{ homarr_api_url }}/api/trpc/app.create"
+    method: POST
+    headers:
+      ApiKey: "{{ homarr_api_key }}"
+    body_format: json
+    body:
+      json:
+        name: "{{ homarr_tile.name }}"
+        description: "{{ homarr_tile.description | default(none) }}"
+        iconUrl: "{{ homarr_icon }}"
+        href: "{{ homarr_tile.href | default(homarr_service_url) }}"
+        # Homarr's server pings the service directly, not through Caddy
+        pingUrl: "{{ 'http://' ~ homarr_service.upstream if homarr_service.upstream is defined else none }}"
+  vars:
+    homarr_service: "{{ homelab_services[item] }}"
+    homarr_tile: "{{ homarr_service.tile }}"
+    homarr_subdomain: "{{ homarr_service.subdomain | default('') }}"
+    homarr_service_url: "https://{{ homarr_subdomain ~ '.' if homarr_subdomain else '' }}{{ homeserver_domain }}"
+    # Homepage icon names are Dashboard Icons, which Homarr takes as URLs
+    homarr_icon: >-
+      {{ homarr_tile.icon if '/' in homarr_tile.icon
+      else 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/' ~ homarr_tile.icon ~ '.png' }}
+  loop: "{{ homarr_apps }}"
+  when: homarr_tile.name not in homarr_existing_apps
+  changed_when: true
+  no_log: true
+
+# Again, for the ids of the apps just created
+- name: integrations | Look up the app ids
+  ansible.builtin.uri:
+    url: "{{ homarr_api_url }}/api/trpc/app.all"
+    headers:
+      ApiKey: "{{ homarr_api_key }}"
+  register: homarr_all_apps
+  no_log: true
+
+- name: integrations | Create the missing integrations
+  ansible.builtin.uri:
+    url: "{{ homarr_api_url }}/api/trpc/integration.create"
+    method: POST
+    headers:
+      ApiKey: "{{ homarr_api_key }}"
+    body_format: json
+    body:
+      json:
+        name: "{{ homarr_name }}"
+        url: "{{ item.value.url }}"
+        kind: "{{ item.value.kind }}"
+        secrets: "{{ item.value.secrets | dict2items(key_name='kind', value_name='value') }}"
+        attemptSearchEngineCreation: false
+        app:
+          id: "{{ homarr_app_ids[homarr_name] }}"
+  vars:
+    homarr_name: "{{ homelab_services[item.key].tile.name }}"
+    homarr_app_ids: "{{ homarr_all_apps.json.result.data.json | items2dict(key_name='name', value_name='id') }}"
+  loop: "{{ homarr_integrations | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: homarr_name not in homarr_existing_integrations
+  register: homarr_created
+  # Homarr answers 200 with an error when its connection test fails; nothing is saved then
+  changed_when: homarr_created.status == 200 and homarr_created.json.result.data.json.error is not defined
+  failed_when: false
+  no_log: true
+
+- name: integrations | Check that Homarr accepted every new integration
+  ansible.builtin.assert:
+    that: homarr_refused | length == 0
+    fail_msg: >-
+      Homarr refused:
+      {% for result in homarr_refused %}
+      {% set error = result.json.result.data.json.error | default({}) %}
+      {{ result.item.key }}: {{ error.message | default(result.json.error.json.message)
+      | default('HTTP ' ~ result.status) }}
+      {%- if error.cause is defined and error.cause %} ({{ error.type }}: {{ error.cause.message }}){% endif %};
+      {% endfor %}
+    quiet: true
+  vars:
+    homarr_tried: "{{ homarr_created.results | selectattr('status', 'defined') }}"
+    homarr_refused: >-
+      {{ (homarr_tried | rejectattr('status', 'eq', 200))
+      + (homarr_tried | selectattr('status', 'eq', 200) | selectattr('json.result.data.json.error', 'defined')) }}

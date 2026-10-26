@@ -16,6 +16,11 @@ homelab_services:
     subdomain: ""
     caddy_matcher: home
     upstream: homepage:3000
+  # Trial of Homarr as the dashboard, next to Homepage. Its apps and integrations are
+  # registered by roles/homarr (homarr_apps, homarr_integrations), from the tiles below.
+  homarr:
+    subdomain: homarr
+    upstream: homarr:7575
   jellyfin:
     subdomain: jellyfin
     # Host networking (see roles/jellyfin)

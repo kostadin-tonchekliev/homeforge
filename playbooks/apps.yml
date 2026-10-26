@@ -4,6 +4,8 @@
   roles:
     - role: homepage
       tags: [homepage]
+    - role: homarr
+      tags: [homarr]
     - role: home_assistant
       tags: [home_assistant]
     - role: esphome
