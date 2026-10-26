@@ -1,0 +1,31 @@
+{#-
+  The body of customWidget.create for one homarr_custom_widgets entry (item): a
+  homarr-custom-widget-v2 definition plus the secrets of its sources. homarr_integration_ids
+  maps integration names to Homarr's ids.
+-#}
+{%- set widget = item.value -%}
+{%- set result = namespace(sources={}, secrets=[]) -%}
+{%- for id, source in widget.sources.items() -%}
+  {%- if source.integration is defined -%}
+    {%- set result.sources = result.sources | combine({id: {
+      'type': 'integration', 'integrationKind': homarr_integrations[source.integration].kind,
+      'integrationId': homarr_integration_ids[homelab_services[source.integration].tile.name]}}) -%}
+  {%- else -%}
+    {%- set result.sources = result.sources | combine({id: {'baseUrl': source.url, 'auth': source.auth | default('none')}}) -%}
+    {%- if source.secret is defined -%}
+      {#- Bearer, API key header and API key query sources all take an "apiKey" secret -#}
+      {%- set result.secrets = result.secrets + [{'sourceId': id, 'kind': 'apiKey', 'value': source.secret}] -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+{{ {
+  '$schema': 'homarr-custom-widget-v2',
+  'name': widget.name,
+  'description': widget.description,
+  'iconUrl': 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/' ~ widget.icon ~ '.png',
+  'sources': result.sources,
+  'requests': widget.requests,
+  'options': {},
+  'template': lookup('ansible.builtin.file', 'custom_widgets/' ~ item.key ~ '.jsx'),
+  'secrets': result.secrets,
+} | to_json }}

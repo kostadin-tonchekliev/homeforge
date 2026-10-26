@@ -2,14 +2,16 @@
 # Lays out homarr_board_sections on a board, through the same tRPC API as integrations.yml.
 # Only while the board doesn't exist or is empty: once it has items, its layout is the UI's.
 
-- name: board | Check that the board only uses known apps and integrations
+- name: board | Check that the board only uses known apps, integrations and custom widgets
   ansible.builtin.assert:
     that:
       - homarr_board_apps | difference(homarr_apps) | length == 0
       - homarr_board_integrations | difference(homarr_integrations.keys()) | length == 0
+      - homarr_board_custom | difference(homarr_custom_widgets.keys()) | length == 0
     fail_msg: >-
       Not in homarr_apps: {{ homarr_board_apps | difference(homarr_apps) | join(', ') }};
-      not in homarr_integrations: {{ homarr_board_integrations | difference(homarr_integrations.keys()) | join(', ') }}
+      not in homarr_integrations: {{ homarr_board_integrations | difference(homarr_integrations.keys()) | join(', ') }};
+      not in homarr_custom_widgets: {{ homarr_board_custom | difference(homarr_custom_widgets.keys()) | join(', ') }}
     quiet: true
   vars:
     homarr_board_apps: "{{ homarr_board_sections | map(attribute='apps', default=[]) | flatten }}"
@@ -17,6 +19,7 @@
     homarr_board_integrations: >-
       {{ homarr_board_widgets | map(attribute='integrations', default=[]) | flatten
       + homarr_board_widgets | map(attribute='stats', default={}) | map('list') | flatten }}
+    homarr_board_custom: "{{ homarr_board_widgets | map(attribute='custom', default='') | select | list }}"
 
 - name: board | Look up the board
   ansible.builtin.uri:
@@ -62,12 +65,13 @@
       register: homarr_board
       no_log: true
 
-    - name: board | Look up the integration ids
+    - name: board | Look up the integration and custom widget ids
       ansible.builtin.uri:
-        url: "{{ homarr_api_url }}/api/trpc/integration.all"
+        url: "{{ homarr_api_url }}/api/trpc/{{ item }}"
         headers:
           ApiKey: "{{ homarr_api_key }}"
-      register: homarr_all_integrations
+      loop: [integration.all, customWidget.list]
+      register: homarr_board_lookup
       no_log: true
 
     - name: board | Save the apps and widgets on the board
@@ -82,7 +86,9 @@
       vars:
         homarr_app_ids: "{{ homarr_all_apps.json.result.data.json | items2dict(key_name='name', value_name='id') }}"
         homarr_integration_ids: >-
-          {{ homarr_all_integrations.json.result.data.json | items2dict(key_name='name', value_name='id') }}
+          {{ homarr_board_lookup.results[0].json.result.data.json | items2dict(key_name='name', value_name='id') }}
+        homarr_custom_widget_ids: >-
+          {{ homarr_board_lookup.results[1].json.result.data.json | items2dict(key_name='name', value_name='id') }}
       register: homarr_board_saved
       changed_when: true
       failed_when: false

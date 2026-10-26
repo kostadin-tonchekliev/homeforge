@@ -1,0 +1,60 @@
+---
+# Creates the missing homarr_custom_widgets through the same tRPC API as integrations.yml, after
+# it: integration sources need the ids of the integrations. Matched by name, never updated.
+
+- name: custom_widgets | Check that the custom widgets only use known integrations
+  ansible.builtin.assert:
+    that: homarr_custom_integrations | difference(homarr_integrations.keys()) | length == 0
+    fail_msg: >-
+      Not in homarr_integrations:
+      {{ homarr_custom_integrations | difference(homarr_integrations.keys()) | join(', ') }}
+    quiet: true
+  vars:
+    homarr_custom_integrations: >-
+      {{ homarr_custom_widgets.values() | map(attribute='sources') | map('dict2items')
+      | flatten | map(attribute='value.integration', default='') | select | list }}
+
+- name: custom_widgets | List the integrations and custom widgets Homarr has
+  ansible.builtin.uri:
+    url: "{{ homarr_api_url }}/api/trpc/{{ item }}"
+    headers:
+      ApiKey: "{{ homarr_api_key }}"
+  loop: [integration.all, customWidget.list]
+  register: homarr_custom_lookup
+  no_log: true
+
+- name: custom_widgets | Create the missing custom widgets
+  ansible.builtin.uri:
+    url: "{{ homarr_api_url }}/api/trpc/customWidget.create"
+    method: POST
+    headers:
+      ApiKey: "{{ homarr_api_key }}"
+    body_format: json
+    body:
+      json: "{{ lookup('ansible.builtin.template', 'custom_widget.json.j2') | from_json }}"
+  vars:
+    homarr_integration_ids: >-
+      {{ homarr_custom_lookup.results[0].json.result.data.json | items2dict(key_name='name', value_name='id') }}
+  loop: "{{ homarr_custom_widgets | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: >-
+    item.value.name not in homarr_custom_lookup.results[1].json.result.data.json | map(attribute='name')
+  register: homarr_custom_created
+  changed_when: true
+  failed_when: false
+  no_log: true
+
+# The response holds no secrets, but the task's arguments do
+- name: custom_widgets | Check that Homarr accepted every new custom widget
+  ansible.builtin.assert:
+    that: homarr_refused | length == 0
+    fail_msg: >-
+      Homarr refused:
+      {% for result in homarr_refused %}
+      {{ result.item.key }}: {{ result.json.error.json.message | default('HTTP ' ~ result.status) }};
+      {% endfor %}
+    quiet: true
+  vars:
+    homarr_refused: >-
+      {{ homarr_custom_created.results | selectattr('status', 'defined') | rejectattr('status', 'eq', 200) }}
