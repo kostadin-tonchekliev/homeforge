@@ -11,6 +11,7 @@ A local Docker sandbox (`docker/`) runs disposable Ubuntu 24.04 and Ubuntu 26.04
 ├── .ansible-lint                  # ansible-lint rule configuration
 ├── .yamllint                      # yamllint configuration
 ├── ansible.cfg                    # points ansible-playbook at the test inventory by default
+├── CLAUDE.md                      # context for Claude sessions: how the server and the roles fit together, conventions, gotchas
 ├── requirements.txt               # pinned ansible-core / lint versions (installed into .venv)
 ├── requirements.yml               # pinned Ansible collections (installed by setup.sh)
 ├── setup.sh                       # one-time local setup (venv, requirements, SSH keys) — see below
