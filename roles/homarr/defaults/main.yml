@@ -104,6 +104,89 @@ homarr_integrations:
     secrets:
       apiKey: "{{ homepage_widget_keys.home_assistant }}"
 
+# Custom widgets, for what no Homarr integration shows: Homarr's server calls the service's own
+# API and renders files/custom_widgets/<id>.jsx (Homarr's restricted JSX, see its "Custom
+# Widgets" docs). Like apps they're only ever created, matched by name: to apply a change to
+# one, delete it in Manage → Custom widgets and run the role again.
+#   sources   by source id, "default" required: integration (an id from homarr_integrations,
+#             whose URL and credentials Homarr uses), or url, plus auth (Homarr's source auth,
+#             e.g. bearer or {type: apiKeyHeader, name: <header>}) and secret (the key it sends)
+#   requests  by request id, read in the template as data.<id> and status.<id>: path, plus
+#             optional source (default "default"), query and cacheSeconds
+homarr_custom_widgets:
+  library:
+    name: Media library
+    description: Movies, shows and episodes in Jellyfin, series in Kavita
+    icon: jellyfin
+    sources:
+      default:
+        integration: jellyfin
+      kavita:
+        url: http://kavita:5000
+        auth: {type: apiKeyHeader, name: x-api-key}
+        # The same user API key as the Homepage widget; Stats needs an admin's
+        secret: "{{ homepage_widget_keys.kavita }}"
+    requests:
+      jellyfin:
+        path: /Items/Counts
+        cacheSeconds: 300
+      kavita:
+        source: kavita
+        path: /api/Stats/server/stats
+        cacheSeconds: 300
+  server:
+    name: Server
+    description: CPU, memory, system disk and uptime of the host, and Prometheus' targets
+    icon: prometheus
+    sources:
+      default:
+        url: http://prometheus:9090
+    requests:
+      # One query for every card: each series gets a "stat" label the template looks up
+      server:
+        path: /api/v1/query
+        cacheSeconds: 15
+        query:
+          query: >-
+            label_replace(100 * (1 - avg(rate(node_cpu_seconds_total{job="node",mode="idle"}[5m]))),
+            "stat", "cpu", "", "")
+            or label_replace(100 * (1 - node_memory_MemAvailable_bytes{job="node"}
+            / node_memory_MemTotal_bytes{job="node"}),
+            "stat", "memory", "", "")
+            or label_replace(100 * (1 - node_filesystem_avail_bytes{job="node",mountpoint="/"}
+            / node_filesystem_size_bytes{job="node",mountpoint="/"}), "stat", "system_disk", "", "")
+            or label_replace(time() - node_boot_time_seconds{job="node"}, "stat", "uptime", "", "")
+            or label_replace(count(up == 1) or vector(0), "stat", "targets_up", "", "")
+            or label_replace(count(up == 0) or vector(0), "stat", "targets_down", "", "")
+  media_drive:
+    name: Media drive
+    description: Free space on the media disk (/media), from Prometheus (node_exporter)
+    icon: prometheus
+    sources:
+      default:
+        url: http://prometheus:9090
+    requests:
+      # node_exporter sees the host's mounts through its /host bind (roles/node_exporter)
+      disk:
+        path: /api/v1/query
+        cacheSeconds: 60
+        query:
+          query: >-
+            label_replace(node_filesystem_avail_bytes{job="node",mountpoint="/media"}, "stat", "free", "", "")
+            or label_replace(node_filesystem_size_bytes{job="node",mountpoint="/media"}, "stat", "size", "", "")
+  dockhand:
+    name: Dockhand
+    description: Containers, updates, images, volumes and stacks, summed over Dockhand's environments
+    icon: dockhand
+    sources:
+      default:
+        url: http://dockhand:3000
+        auth: bearer
+        secret: "{{ homepage_widget_keys.dockhand }}"
+    requests:
+      stats:
+        path: /api/dashboard/stats
+
 # The board Ansible lays out, with the apps above and a widget per integration. It's only
 # filled while it doesn't exist or is empty: after that the layout is the UI's, so to start
 # over, delete the board in the UI and run the role again. Its name may only hold letters,
@@ -115,14 +198,18 @@ homarr_board_columns: 12
 # Make it the home board of the API key's user when it's created
 homarr_board_home: true
 
-# One container per Homepage group, in the same order. Containers are placed left to right on
-# the board and items left to right inside them (apps first, then widgets), wrapping to a new
-# row when a row is full; sizes are in grid cells, apps are 1x1.
+# The containers, placed left to right and wrapping to a new row when a row is full; items are
+# placed the same way inside them (apps first, then widgets). Sizes are in grid cells, apps are
+# 1x1. Containers side by side have the same height and every row of a container is full, so
+# the board has no holes; a stat card needs one column at height 1.
 #   apps     ids from homarr_apps
-#   widgets  kind: Homarr widget kind; integrations: ids from homarr_integrations;
-#            options: widget options, Homarr's defaults otherwise; for "stats" widgets,
-#            stats: {integration id: [metric keys]} instead of integrations
-# A widget whose integrations Homarr doesn't have is left out.
+#   widgets  kind: Homarr widget kind, plus
+#              integrations: ids from homarr_integrations, or
+#              stats: {integration id: {metric key: card label}} for "stats" widgets, or
+#              custom: an id from homarr_custom_widgets for "customApi" widgets;
+#            options: widget options, Homarr's defaults otherwise
+# A widget whose integrations or custom widget Homarr doesn't have is left out. In a narrower
+# layout (mobile), a widget narrowed to fit keeps its area: it gets taller instead.
 homarr_board_sections:
   - title: Media
     width: 6
@@ -130,76 +217,96 @@ homarr_board_sections:
     widgets:
       - kind: stats
         stats:
-          jellystat: [movies, episodes]
-          audiobookshelf: [totalAudiobooks, activeSessions]
+          jellystat: {movies: Movies watched (30 d), episodes: Episodes watched (30 d)}
         width: 2
-        height: 2
+      - kind: customApi
+        custom: library
+        width: 4
+      - kind: stats
+        stats:
+          audiobookshelf: {totalAudiobooks: Audiobooks, totalPodcasts: Podcasts}
+        width: 2
       - kind: mediaServer
         integrations: [jellyfin]
         width: 6
         height: 2
-  - title: PVR
+  - title: Downloads
     width: 6
-    apps: [sonarr, radarr]
+    apps: [sonarr, radarr, prowlarr, deluge]
     widgets:
       - kind: stats
         stats:
-          sonarr: [shows, missing, queued]
-          radarr: [movies, missing, queued]
-        width: 4
-        height: 2
-      - kind: calendar
-        integrations: [sonarr, radarr]
+          deluge: {download: Download speed, upload: Upload speed}
+        width: 2
+      # "Missing" is what Sonarr and Radarr list under Wanted → Missing (monitored, not downloaded)
+      - kind: stats
+        stats:
+          sonarr: {shows: Shows, missing: Missing episodes, queued: Episodes queued}
+          radarr: {movies: Movies, missing: Missing movies, queued: Movies queued}
         width: 6
-        height: 3
-  - title: Miscellaneous
-    width: 6
-    apps: [prowlarr, deluge, dockhand]
-    widgets:
-      - kind: indexerManager
-        integrations: [prowlarr]
-        width: 3
-        height: 3
+      # Unfinished torrents sort first; the chevron in its footer shows the count per state
       - kind: downloads
         integrations: [deluge]
+        options:
+          columns: [name, state, progress, downSpeed, upSpeed, ratio]
         width: 6
         height: 2
+  - title: Server
+    width: 6
+    apps: [dockhand, grafana, prometheus, postgres]
+    widgets:
+      - kind: customApi
+        custom: media_drive
+        width: 2
+      - kind: customApi
+        custom: server
+        width: 6
+      - kind: customApi
+        custom: dockhand
+        width: 6
   - title: Network
     width: 6
-    apps: [caddy, pihole, ntopng]
+    apps: [pihole, caddy, ntopng, uptime_kuma]
     widgets:
-      - kind: dnsHoleSummary
+      - kind: dnsHoleControls
         integrations: [pihole]
-        width: 3
-        height: 2
+        width: 2
       - kind: stats
         stats:
-          caddy: [upstreams, requests, requestsFailed]
+          pihole:
+            dnsQueriesToday: DNS queries today
+            adsBlockedToday: Blocked today
+            adsBlockedTodayPercentage: Share blocked
+            domainsBeingBlocked: Domains on blocklist
+        width: 4
+      - kind: stats
+        stats:
+          caddy: {upstreams: Caddy upstreams, requestsFailed: Failed upstream requests}
+        width: 2
+      - kind: stats
+        stats:
+          uptime_kuma:
+            totalMonitors: Monitors
+            upCount: Up
+            downCount: Down
+            pendingCount: Pending
+            maintenanceCount: In maintenance
+            averageUptimePercent: Uptime (24 h)
         width: 6
-        height: 1
-  - title: Database
-    width: 6
-    apps: [postgres, postgres_exporter]
-  - title: Monitoring
-    width: 6
-    apps: [grafana, uptime_kuma, prometheus]
+  - title: Upcoming
+    width: 8
     widgets:
-      # A stat needs about 2 columns at height 1, hence 2 here
-      - kind: stats
-        stats:
-          prometheus: [up, down]
-        width: 3
-        height: 1
-      - kind: uptimeKuma
-        integrations: [uptime_kuma]
-        width: 6
-        height: 3
-  - title: Tools
-    width: 6
+      - kind: calendar
+        integrations: [sonarr, radarr]
+        options:
+          viewMode: agenda
+        width: 8
+        height: 2
+  - title: Home & tools
+    width: 4
     apps: [home_assistant, esphome, open_webui, gitlab]
     widgets:
       - kind: stats
         stats:
-          home_assistant: [entities, unavailable, lightsOn, peopleHome]
-        width: 2
-        height: 2
+          home_assistant: {entities: Entities, unavailable: Unavailable, lightsOn: Lights on, peopleHome: People home}
+        width: 4
