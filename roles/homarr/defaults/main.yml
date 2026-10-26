@@ -12,7 +12,6 @@ homarr_api_url: http://127.0.0.1:7575
 # Apps (link tiles) Ansible makes sure exist; ids refer to homelab_services, whose tile gives the
 # name, icon, link and description. Apps and integrations are only ever created, matched by
 # name: changes made in the UI stay, but one deleted there comes back on the next run.
-# Placing them on a board is done in the UI.
 homarr_apps:
   - jellyfin
   - jellystat
@@ -104,3 +103,103 @@ homarr_integrations:
     url: http://host.docker.internal:8123
     secrets:
       apiKey: "{{ homepage_widget_keys.home_assistant }}"
+
+# The board Ansible lays out, with the apps above and a widget per integration. It's only
+# filled while it doesn't exist or is empty: after that the layout is the UI's, so to start
+# over, delete the board in the UI and run the role again. Its name may only hold letters,
+# digits, "-" and "_".
+homarr_board_name: homelab
+# Columns of the desktop layout. The mobile layout has Homarr's 3 columns; anything wider
+# than a layout is narrowed to fit it.
+homarr_board_columns: 12
+# Make it the home board of the API key's user when it's created
+homarr_board_home: true
+
+# One container per Homepage group, in the same order. Containers are placed left to right on
+# the board and items left to right inside them (apps first, then widgets), wrapping to a new
+# row when a row is full; sizes are in grid cells, apps are 1x1.
+#   apps     ids from homarr_apps
+#   widgets  kind: Homarr widget kind; integrations: ids from homarr_integrations;
+#            options: widget options, Homarr's defaults otherwise; for "stats" widgets,
+#            stats: {integration id: [metric keys]} instead of integrations
+# A widget whose integrations Homarr doesn't have is left out.
+homarr_board_sections:
+  - title: Media
+    width: 6
+    apps: [jellyfin, jellystat, audiobookshelf, kavita]
+    widgets:
+      - kind: stats
+        stats:
+          jellystat: [movies, episodes]
+          audiobookshelf: [totalAudiobooks, activeSessions]
+        width: 2
+        height: 2
+      - kind: mediaServer
+        integrations: [jellyfin]
+        width: 6
+        height: 2
+  - title: PVR
+    width: 6
+    apps: [sonarr, radarr]
+    widgets:
+      - kind: stats
+        stats:
+          sonarr: [shows, missing, queued]
+          radarr: [movies, missing, queued]
+        width: 4
+        height: 2
+      - kind: calendar
+        integrations: [sonarr, radarr]
+        width: 6
+        height: 3
+  - title: Miscellaneous
+    width: 6
+    apps: [prowlarr, deluge, dockhand]
+    widgets:
+      - kind: indexerManager
+        integrations: [prowlarr]
+        width: 3
+        height: 3
+      - kind: downloads
+        integrations: [deluge]
+        width: 6
+        height: 2
+  - title: Network
+    width: 6
+    apps: [caddy, pihole, ntopng]
+    widgets:
+      - kind: dnsHoleSummary
+        integrations: [pihole]
+        width: 3
+        height: 2
+      - kind: stats
+        stats:
+          caddy: [upstreams, requests, requestsFailed]
+        width: 6
+        height: 1
+  - title: Database
+    width: 6
+    apps: [postgres, postgres_exporter]
+  - title: Monitoring
+    width: 6
+    apps: [grafana, uptime_kuma, prometheus]
+    widgets:
+      # A stat needs about 2 columns at height 1, hence 2 here
+      - kind: stats
+        stats:
+          prometheus: [up, down]
+        width: 3
+        height: 1
+      - kind: uptimeKuma
+        integrations: [uptime_kuma]
+        width: 6
+        height: 3
+  - title: Tools
+    width: 6
+    apps: [home_assistant, esphome, open_webui, gitlab]
+    widgets:
+      - kind: stats
+        stats:
+          home_assistant: [entities, unavailable, lightsOn, peopleHome]
+        width: 2
+        height: 2

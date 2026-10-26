@@ -14,14 +14,18 @@
 - name: main | Say why the apps and integrations aren't registered
   ansible.builtin.debug:
     msg: >-
-      Apps and integrations are not registered:
+      Apps, integrations and the board are not set up:
       {{ 'a dry run does not call the Homarr API.' if ansible_check_mode else
       'homarr_api_key is empty. Finish the onboarding, create an API key (Manage → Tools → API)
       and put it in the vault.' }}
   when: ansible_check_mode or not homarr_api_key
 
-- name: main | Register the apps and integrations
-  ansible.builtin.include_tasks: integrations.yml
+- name: main | Register the apps and integrations, and lay out the board
+  ansible.builtin.include_tasks: "{{ homarr_tasks_file }}"
+  loop: [integrations.yml, board.yml]
+  loop_control:
+    # The included tasks loop over item themselves
+    loop_var: homarr_tasks_file
   when:
     - not ansible_check_mode
     - homarr_api_key | length > 0

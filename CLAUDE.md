@@ -137,7 +137,9 @@ Notes:
   `roles/homarr` registers the missing ones (`homarr_apps`, `homarr_integrations`) through
   the tRPC API its UI uses, authenticated with `homarr_api_key`. That key can only be
   created in the UI after the onboarding, so until it's in the vault that step is skipped.
-  Items are matched by name and only ever created. Boards are laid out in the UI. Its
+  Items are matched by name and only ever created. It also lays out the `homelab` board
+  (`homarr_board_sections`: a container per Homepage group, apps and widgets), but only
+  while that board doesn't exist or is empty; after that its layout is UI state. Its
   socket proxy is read-only, so the start/stop buttons on its Docker page are refused.
   The 127.0.0.1:7575 port exists only so Ansible can call the API from the host.
 - **Home Assistant** keeps its reverse-proxy trust (`use_x_forwarded_for`, trusted proxy
