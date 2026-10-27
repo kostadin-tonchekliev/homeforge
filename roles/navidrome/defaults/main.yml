@@ -1,0 +1,3 @@
+---
+# The music library on the host, filled by hand; Navidrome only reads it
+navidrome_music_dir: /media/music

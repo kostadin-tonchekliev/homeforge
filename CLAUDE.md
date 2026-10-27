@@ -114,7 +114,8 @@ publish its port (or publish it on `127.0.0.1`) and let Caddy reach it over `pro
 | Radarr | `radarr` | `lscr.io/linuxserver/radarr` | arr_network, proxy, db | `radarr` | 7878 | `radarr-main/-log` |
 | Audiobookshelf | `audiobookshelf` | `ghcr.io/advplyr/audiobookshelf` | proxy | `abs` | 13378 | SQLite |
 | Kavita | `kavita` | `jvmilazz0/kavita` | proxy | `kavita` | 5000 | SQLite |
-| deadair | `deadair` | `deadair/deadair` (**amd64 only**) | default, proxy, db | `radio` | – | `deadair` (+ Redis db 0) |
+| Navidrome | `navidrome` | `navidrome/navidrome` | proxy | `music` | – | SQLite |
+| SUB/WAVE (5 containers) | `subwave` | `ghcr.io/perminder-klair/subwave-{broadcast,controller,web,analyzer}`, `tecnativa/docker-socket-proxy` | default, proxy, socket | `radio` | – | SQLite |
 | Prometheus | `prometheus` | `prom/prometheus` | proxy, db | `prometheus` | – | TSDB, 15 d |
 | node_exporter | `node_exporter` | `prom/node-exporter` | **host** (9100), host PID | – | (host 9100) | – |
 | Grafana | `grafana` | `grafana/grafana` | proxy, db | `grafana` | – | `grafana` |
@@ -157,14 +158,20 @@ Notes:
   the `instance` label it had when Prometheus ran on the host** (`localhost:9100`,
   `localhost:8080`, `10.40.0.2:2020`, `127.0.0.1:9187`), so history stays continuous. Keep
   those labels if you touch the targets.
-- **deadair** (AI radio station) is the one exception to "works on arm64": its image is
-  amd64-only, so the compose file sets `platform: linux/amd64`. In the Mac sandbox it needs
-  qemu registered inside the box once (`docker run --privileged --rm tonistiigi/binfmt
-  --install amd64`), otherwise it fails with `exec format error`. Its migrations run as the
-  `deadair` login and grant to a NOLOGIN `app_user` role that `roles/postgres` creates
-  (`nologin_roles`), so the login needs no CREATEROLE. Sessions live in the shared Redis,
-  reached through `REDIS_URL` (the only way to pick its database index). The music provider (Spotify), presenter, AI model and voice are set in its
-  console (app state); the two keys it generates are in `/opt/deadair/data/secrets`.
+- **Navidrome** serves the music library `navidrome_music_dir` (`/media/music`, setgid
+  `2775`, group `media`), which the owner fills by hand. It runs as the server user and the
+  `media` group and mounts the library read-only. Its users (the first one, made in its UI,
+  is the admin) and settings are app state.
+- **SUB/WAVE** is an AI radio station playing the Navidrome library: icecast + liquidsoap
+  (`sub-wave-broadcast`), the AI DJ (`sub-wave-controller`), the UI (`sub-wave-web`) and an
+  acoustic analyzer, mirroring upstream's compose file without its own Caddy and without
+  the optional GPU-sized `tts-heavy` voices. Caddy routes `radio.` by path
+  (`caddy_routes`): the streams (unbuffered), `/api/*` with the prefix stripped, the tune-in
+  files, and a 404 for Icecast's internal `/api/listener-auth` callback. Its Navidrome
+  login, LLM, voice and personas are set in its first-run wizard and kept in
+  `/opt/subwave/state` (`settings.json`, `library.db`), which the broadcast container makes
+  `1777` itself; the Icecast passwords are generated there too. It reaches Navidrome as
+  `http://navidrome:4533` over `proxy`. Its admin login is `subwave_admin_password`.
 - **Caddy's `:2020` listener** is internal and not published. It serves `/metrics` and a
   read-only `/reverse_proxy/upstreams` for the Homepage widget. The admin API stays on
   localhost:2019.
@@ -177,13 +184,12 @@ Notes:
 - Apps reach it as `postgres:5432` over the `db` network. Home Assistant (host network)
   uses `127.0.0.1:5432`.
 - `roles/postgres` creates the logins, databases and extensions from `postgres_apps`, and
-  the read-only `exporter` login (`pg_monitor`). `nologin_roles` creates roles without a
-  login that an app's migrations grant to (deadair's `app_user`). GitLab needs `pg_trgm`,
-  `btree_gist` and `amcheck`, created by the superuser.
+  the read-only `exporter` login (`pg_monitor`). GitLab needs `pg_trgm`, `btree_gist` and
+  `amcheck`, created by the superuser.
 - `/opt/postgres/README.md` (from `roles/postgres/files/README.md`) is the runbook for
   manual backup and restore.
 - **Staying on SQLite** because there's no Postgres support: Jellyfin, Uptime Kuma,
-  Kavita, Audiobookshelf, Pi-hole, Dockhand, ntopng.
+  Kavita, Audiobookshelf, Pi-hole, Dockhand, ntopng, Navidrome, SUB/WAVE.
 
 ### Shared Redis
 
@@ -202,9 +208,8 @@ Notes:
   (`compose_app`'s restart-on-config-change only fires when compose recreated nothing).
 - `redis-exporter` (same stack) feeds Prometheus job `redis` and the Grafana "Redis"
   dashboard.
-- Users today: deadair (db 0, sessions and rate limits) and Homarr (db 1, its cache, job
-  queues and pub/sub, instead of the Redis bundled in its image). Both are disposable:
-  losing them only signs people out of deadair and empties Homarr's cache. Persistence is
+- Users today: Homarr (db 1, its cache, job queues and pub/sub, instead of the Redis bundled
+  in its image), which is disposable: losing it only empties Homarr's cache. Persistence is
   Redis' default RDB snapshots in `data/`.
 - Pub/sub channels are global, not per database index. Homarr's are all `pubSub:*`.
 - GitLab and ntopng keep their own bundled Redis: GitLab's is managed by Omnibus and busy
@@ -284,7 +289,7 @@ playbooks/
   setup.yml            imports base, core, media, monitoring, apps; every role is tagged with its name
   base.yml             common, firewall, docker
   core.yml             caddy, pihole, postgres, redis
-  media.yml            jellyfin, deluge, flaresolverr, prowlarr, sonarr, radarr, jellystat, audiobookshelf, kavita
+  media.yml            jellyfin, deluge, flaresolverr, prowlarr, sonarr, radarr, jellystat, audiobookshelf, kavita, navidrome, subwave
   monitoring.yml       node_exporter, cadvisor, prometheus, grafana, uptime_kuma, ntopng
   apps.yml             homepage, homarr, home_assistant, esphome, ollama, gitlab, dockhand
   update.yml           apt dist-upgrade, then every play again with pull/build = always, then prune dangling images
@@ -348,8 +353,9 @@ roles/<service>/
 
 `inventory/group_vars/homeserver/services.yml` → `homelab_services`, keyed by service id:
 - `subdomain` (`""` = the bare domain) and `upstream` (`container:port` on `proxy`, or
-  `host.docker.internal:port`) feed **the Caddyfile**. `caddy_matcher` and
-  `caddy_directives` are optional.
+  `host.docker.internal:port`) feed **the Caddyfile**. `caddy_matcher`,
+  `caddy_directives` and `caddy_routes` (routes by path, tried before `upstream`) are
+  optional.
 - `tile` feeds **Homepage's `services.yaml`**: name, icon, description, `container` (which
   gives a status dot via `my-docker`), `widget` and an optional `href`. Widget keys come
   from `homepage_widget_keys` (the vault in prod).
@@ -368,6 +374,7 @@ roles/<service>/
   - the Homepage widget keys, the Deluge and ESPHome passwords;
   - Home Assistant `secrets.yaml` values;
   - the GitLab runner tokens and the Jellystat JWT secret;
+  - the SUB/WAVE admin password (`vault_subwave_admin_password`);
   - the Homarr encryption key (`vault_homarr_secret_encryption_key`, never change it) and
     API key (`vault_homarr_api_key`, optional until the onboarding is done).
 
@@ -500,8 +507,9 @@ These live only on the server and are **not backed up**:
 - Home Assistant's `.storage`, `automations.yaml`, HACS, `zigbee.db`;
 - GitLab repositories, uploads and `config/gitlab-secrets.json`;
 - the data of Kavita, Audiobookshelf, Uptime Kuma (including its monitors), Pi-hole,
-  Deluge (torrent state), ESPHome device configs, Dockhand, Ollama's models, and deadair
-  (`/opt/deadair/data`: settings, presenters, provider credentials and the keys encrypting them);
+  Deluge (torrent state), ESPHome device configs, Dockhand, Ollama's models, Navidrome's
+  users and settings, and SUB/WAVE's state (`/opt/subwave/state`: settings, personas,
+  `library.db` with the LLM's tags for the library);
 - app settings made in UIs: Sonarr/Radarr/Prowlarr indexers, download clients and quality
   profiles; Jellyfin plugins such as Trakt; Jellystat's Jellyfin URL.
 
@@ -509,7 +517,8 @@ After a fresh rebuild without that state:
 - set Home Assistant's trusted proxy in its UI;
 - put the new apps' API keys into `vault_homepage_widget_keys`;
 - re-register the GitLab runners and update `vault_gitlab_runner_tokens`;
-- finish Homarr's onboarding, create an API key and update `vault_homarr_api_key`.
+- finish Homarr's onboarding, create an API key and update `vault_homarr_api_key`;
+- create Navidrome's admin, then run SUB/WAVE's wizard with a Navidrome login.
 
 ## Known issues the owner has chosen to leave
 

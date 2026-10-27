@@ -47,7 +47,33 @@
 {% for directive in service.caddy_directives | default([]) %}
 		{{ directive }}
 {% endfor %}
+{% for route in service.caddy_routes | default([]) %}
+{% if route.strip_prefix | default(false) %}
+		handle_path {{ route.paths | first }} {
+{% else %}
+		@{{ matcher }}_{{ loop.index }} path {{ route.paths | join(' ') }}
+		handle @{{ matcher }}_{{ loop.index }} {
+{% endif %}
+{% if route.respond is defined %}
+			respond {{ route.respond }}
+{% elif route.options | default([]) %}
+			reverse_proxy {{ route.upstream }} {
+{% for option in route.options %}
+				{{ option }}
+{% endfor %}
+			}
+{% else %}
+			reverse_proxy {{ route.upstream }}
+{% endif %}
+		}
+{% endfor %}
+{% if service.caddy_routes | default([]) %}
+		handle {
+			reverse_proxy {{ service.upstream }}
+		}
+{% else %}
 		reverse_proxy {{ service.upstream }}
+{% endif %}
 	}
 {% endfor %}
 

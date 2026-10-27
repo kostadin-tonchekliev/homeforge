@@ -57,6 +57,8 @@ gitlab_runner_tokens:
 
 jellystat_jwt_secret: dev-jellystat-jwt
 
+subwave_admin_password: dev-subwave
+
 homarr_secret_encryption_key: "de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7d"
 # No API key: it only exists after the onboarding in the sandbox's Homarr, so the apps and
 # integrations aren't registered there unless one is passed with -e homarr_api_key=...

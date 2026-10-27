@@ -3,7 +3,7 @@
 # Group styles/icons are in files/settings.yaml (layout).
 homepage_groups:
   - name: Media
-    services: [jellyfin, jellystat, audiobookshelf, kavita]
+    services: [jellyfin, jellystat, audiobookshelf, kavita, navidrome, subwave]
   - name: PVR
     services: [sonarr, radarr]
   - name: Miscellaneous

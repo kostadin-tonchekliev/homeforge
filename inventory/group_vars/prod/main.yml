@@ -38,6 +38,8 @@ gitlab_runner_tokens: "{{ vault_gitlab_runner_tokens }}"
 
 jellystat_jwt_secret: "{{ vault_jellystat_jwt_secret }}"
 
+subwave_admin_password: "{{ vault_subwave_admin_password }}"
+
 homarr_secret_encryption_key: "{{ vault_homarr_secret_encryption_key }}"
 # Created in Homarr's UI after the first deploy, so it may not be in the vault yet
 homarr_api_key: "{{ vault_homarr_api_key | default('') }}"
