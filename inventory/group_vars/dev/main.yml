@@ -13,6 +13,7 @@ pihole_password: dev-pihole
 postgres_password: dev-postgres
 postgres_exporter_password: dev-exporter
 postgres_app_passwords:
+  deadair: dev-deadair
   gitlab: dev-gitlab
   grafana: dev-grafana
   homarr: dev-homarr

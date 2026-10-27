@@ -1,0 +1,16 @@
+---
+- name: main | Deploy the deadair stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: deadair
+    compose_app_dirs:
+      # The station runs as uid 99, gid 100 (its image's own user); its init chowns what it
+      # creates under data/ itself
+      - path: data
+        owner: "99"
+        group: "100"
+      # The redis entrypoint chowns its data to its own uid
+      - path: redis
+    compose_app_env:
+      DATABASE_PASSWORD: "{{ postgres_app_passwords['deadair'] }}"

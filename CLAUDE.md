@@ -113,6 +113,7 @@ publish its port (or publish it on `127.0.0.1`) and let Caddy reach it over `pro
 | Radarr | `radarr` | `lscr.io/linuxserver/radarr` | arr_network, proxy, db | `radarr` | 7878 | `radarr-main/-log` |
 | Audiobookshelf | `audiobookshelf` | `ghcr.io/advplyr/audiobookshelf` | proxy | `abs` | 13378 | SQLite |
 | Kavita | `kavita` | `jvmilazz0/kavita` | proxy | `kavita` | 5000 | SQLite |
+| deadair + Redis | `deadair` | `deadair/deadair` (**amd64 only**), `redis` | default, proxy, db | `radio` | – | `deadair` |
 | Prometheus | `prometheus` | `prom/prometheus` | proxy, db | `prometheus` | – | TSDB, 15 d |
 | node_exporter | `node_exporter` | `prom/node-exporter` | **host** (9100), host PID | – | (host 9100) | – |
 | Grafana | `grafana` | `grafana/grafana` | proxy, db | `grafana` | – | `grafana` |
@@ -154,6 +155,14 @@ Notes:
   the `instance` label it had when Prometheus ran on the host** (`localhost:9100`,
   `localhost:8080`, `10.40.0.2:2020`, `127.0.0.1:9187`), so history stays continuous. Keep
   those labels if you touch the targets.
+- **deadair** (AI radio station) is the one exception to "works on arm64": its image is
+  amd64-only, so the compose file sets `platform: linux/amd64`. In the Mac sandbox it needs
+  qemu registered inside the box once (`docker run --privileged --rm tonistiigi/binfmt
+  --install amd64`), otherwise it fails with `exec format error`. Its migrations run as the
+  `deadair` login and grant to a NOLOGIN `app_user` role that `roles/postgres` creates
+  (`nologin_roles`), so the login needs no CREATEROLE. Sessions live in the stack's own
+  `deadair-redis`. The music provider (Spotify), presenter, AI model and voice are set in its
+  console (app state); the two keys it generates are in `/opt/deadair/data/secrets`.
 - **Caddy's `:2020` listener** is internal and not published. It serves `/metrics` and a
   read-only `/reverse_proxy/upstreams` for the Homepage widget. The admin API stays on
   localhost:2019.
@@ -166,8 +175,9 @@ Notes:
 - Apps reach it as `postgres:5432` over the `db` network. Home Assistant (host network)
   uses `127.0.0.1:5432`.
 - `roles/postgres` creates the logins, databases and extensions from `postgres_apps`, and
-  the read-only `exporter` login (`pg_monitor`). GitLab needs `pg_trgm`, `btree_gist` and
-  `amcheck`, created by the superuser.
+  the read-only `exporter` login (`pg_monitor`). `nologin_roles` creates roles without a
+  login that an app's migrations grant to (deadair's `app_user`). GitLab needs `pg_trgm`,
+  `btree_gist` and `amcheck`, created by the superuser.
 - `/opt/postgres/README.md` (from `roles/postgres/files/README.md`) is the runbook for
   manual backup and restore.
 - **Staying on SQLite** because there's no Postgres support: Jellyfin, Uptime Kuma,
@@ -443,7 +453,9 @@ Run the sandbox twice after a change to prove idempotence; the second run must r
 - **`update.yml` never reboots.** It reports when `/var/run/reboot-required` exists.
 - **The Mac needs Python 3.12–3.14** (`setup.sh` picks one) and a copy of `.vault_pass`.
 - **Dry runs:** steps that need a Python library on the target (psycopg2, lxml) skip
-  themselves with a message in check mode when the library isn't installed yet.
+  themselves with a message in check mode when the library isn't installed yet. So do the
+  steps that need something a dry run doesn't really create: `docker compose` for a new
+  stack, and the privileges and extensions of a new database.
 - **GitLab's container writes some `/opt/gitlab` files as uid 996.** On the host that
   number has no name (it used to be the `prometheus` user). That's harmless.
 
@@ -455,7 +467,8 @@ These live only on the server and are **not backed up**:
 - Home Assistant's `.storage`, `automations.yaml`, HACS, `zigbee.db`;
 - GitLab repositories, uploads and `config/gitlab-secrets.json`;
 - the data of Kavita, Audiobookshelf, Uptime Kuma (including its monitors), Pi-hole,
-  Deluge (torrent state), ESPHome device configs, Dockhand, and Ollama's models;
+  Deluge (torrent state), ESPHome device configs, Dockhand, Ollama's models, and deadair
+  (`/opt/deadair/data`: settings, presenters, provider credentials and the keys encrypting them);
 - app settings made in UIs: Sonarr/Radarr/Prowlarr indexers, download clients and quality
   profiles; Jellyfin plugins such as Trakt; Jellystat's Jellyfin URL.
 

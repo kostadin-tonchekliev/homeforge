@@ -13,6 +13,11 @@
 
 - name: databases | Manage the app logins, databases and extensions
   when: not (ansible_check_mode and postgres_psycopg2.changed)
+  vars:
+    # What "Create the app databases" (would have) created
+    postgres_new_databases: >-
+      {{ postgres_databases.results | default([]) | selectattr('changed')
+      | map(attribute='item.1') | list }}
   block:
     - name: databases | Create the app logins
       community.postgresql.postgresql_user:
@@ -48,6 +53,18 @@
         login_user: postgres
         login_password: "{{ postgres_password }}"
 
+    # Roles are cluster-wide: these exist once, whichever app asks for them
+    - name: databases | Create the roles without a login that the apps grant to
+      community.postgresql.postgresql_user:
+        name: "{{ item.1 }}"
+        role_attr_flags: NOLOGIN
+        login_host: 127.0.0.1
+        login_user: postgres
+        login_password: "{{ postgres_password }}"
+      loop: "{{ postgres_apps | subelements('nologin_roles', skip_missing=true) }}"
+      loop_control:
+        label: "{{ item.0.role }}: {{ item.1 }}"
+
     - name: databases | Create the app databases
       community.postgresql.postgresql_db:
         name: "{{ item.1 }}"
@@ -58,7 +75,9 @@
       loop: "{{ postgres_apps | subelements('databases') }}"
       loop_control:
         label: "{{ item.1 }}"
+      register: postgres_databases
 
+    # A dry run doesn't really create a new database, so the next two steps skip those
     - name: databases | Stop other logins from connecting to the app databases
       community.postgresql.postgresql_privs:
         login_db: postgres
@@ -73,6 +92,7 @@
       loop: "{{ postgres_apps | subelements('databases') }}"
       loop_control:
         label: "{{ item.1 }}"
+      when: not (ansible_check_mode and item.1 in postgres_new_databases)
 
     - name: databases | Create the extensions the apps need
       community.postgresql.postgresql_ext:
@@ -84,3 +104,4 @@
       loop: "{{ postgres_apps | subelements('extensions', skip_missing=true) }}"
       loop_control:
         label: "{{ item.0.databases[0] }}: {{ item.1 }}"
+      when: not (ansible_check_mode and item.0.databases[0] in postgres_new_databases)
