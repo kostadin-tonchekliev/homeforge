@@ -17,9 +17,8 @@ services:
       DATABASE_NAME: deadair
       DATABASE_USER: deadair
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      # Sessions live in the stack's own Redis below, which nothing else can reach (no AUTH)
-      REDIS_HOST: deadair-redis
-      REDIS_PORT: 6379
+      # Sessions: shared Redis server (/opt/redis), user "deadair" and its own database index
+      REDIS_URL: ${REDIS_URL}
       # Served by Caddy at https://radio.{{ homeserver_domain }}: the Spotify authorization and
       # sign-in links come back to this address
       APP_BASE_URL: https://radio.{{ homeserver_domain }}
@@ -38,22 +37,10 @@ services:
       timeout: 10s
       retries: 5
       start_period: 120s
-    depends_on:
-      - redis
     networks:
       - default
       - proxy
       - db
-
-  redis:
-    image: redis:latest
-    container_name: deadair-redis
-    restart: unless-stopped
-    volumes:
-      # Losing it only signs everyone out
-      - /opt/deadair/redis:/data
-    networks:
-      - default
 
 networks:
   default:

@@ -26,6 +26,11 @@ postgres_app_passwords:
 
 grafana_db_password: dev-grafana
 
+redis_app_passwords:
+  deadair: dev-deadair-redis
+  homarr: dev-homarr-redis
+redis_exporter_password: dev-redis-exporter
+
 # Homepage widgets can't authenticate in the sandbox (fresh apps have other keys); that's fine
 homepage_widget_keys:
   jellyfin: dev-key

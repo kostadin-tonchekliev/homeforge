@@ -20,6 +20,14 @@ services:
       DB_NAME: homarr
       DB_USER: homarr
       DB_PASSWORD: ${DB_PASSWORD}
+      # Cache, queues and pub/sub: shared Redis server (/opt/redis), user "homarr" and its own
+      # database index, instead of the Redis bundled in the image
+      REDIS_IS_EXTERNAL: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_USERNAME: homarr
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DATABASE_INDEX: {{ homeserver_redis_dbs['homarr'] }}
       # Served by Caddy at https://homarr.{{ homeserver_domain }}; Caddy's address is trusted for the client IP
       BASE_URL: https://homarr.{{ homeserver_domain }}
       HOMARR_TRUSTED_PROXIES: {{ homeserver_caddy_ip }}

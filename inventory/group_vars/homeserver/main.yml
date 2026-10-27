@@ -29,5 +29,12 @@ homeserver_domain: home.tonchekliev.info
 homeserver_proxy_subnet: 10.40.0.0/24
 homeserver_caddy_ip: 10.40.0.2
 
+# Apps on the shared Redis server and their database index: roles/redis creates a user per
+# app, and the app connects to its own index (the apps' keys aren't prefixed, so the index is
+# what keeps them apart)
+homeserver_redis_dbs:
+  deadair: 0
+  homarr: 1
+
 # ESPHome dashboard login; also used by the Homepage ESPHome widget (password per environment)
 esphome_username: admin

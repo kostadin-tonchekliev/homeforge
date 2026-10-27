@@ -10,6 +10,7 @@
     compose_app_env:
       SECRET_ENCRYPTION_KEY: "{{ homarr_secret_encryption_key }}"
       DB_PASSWORD: "{{ postgres_app_passwords['homarr'] }}"
+      REDIS_PASSWORD: "{{ redis_app_passwords['homarr'] }}"
 
 - name: main | Say why the apps and integrations aren't registered
   ansible.builtin.debug:

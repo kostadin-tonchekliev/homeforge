@@ -10,7 +10,9 @@
       - path: data
         owner: "99"
         group: "100"
-      # The redis entrypoint chowns its data to its own uid
-      - path: redis
     compose_app_env:
       DATABASE_PASSWORD: "{{ postgres_app_passwords['deadair'] }}"
+      # A URL, because that's the only way to pick the database index
+      REDIS_URL: >-
+        redis://deadair:{{ redis_app_passwords['deadair'] | urlencode }}@redis:6379/{{
+        homeserver_redis_dbs['deadair'] }}
