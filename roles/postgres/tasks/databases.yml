@@ -53,18 +53,6 @@
         login_user: postgres
         login_password: "{{ postgres_password }}"
 
-    # Roles are cluster-wide: these exist once, whichever app asks for them
-    - name: databases | Create the roles without a login that the apps grant to
-      community.postgresql.postgresql_user:
-        name: "{{ item.1 }}"
-        role_attr_flags: NOLOGIN
-        login_host: 127.0.0.1
-        login_user: postgres
-        login_password: "{{ postgres_password }}"
-      loop: "{{ postgres_apps | subelements('nologin_roles', skip_missing=true) }}"
-      loop_control:
-        label: "{{ item.0.role }}: {{ item.1 }}"
-
     - name: databases | Create the app databases
       community.postgresql.postgresql_db:
         name: "{{ item.1 }}"

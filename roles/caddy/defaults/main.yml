@@ -9,7 +9,7 @@ caddy_sections:
   - name: Dashboard
     services: [homepage, homarr]
   - name: Media
-    services: [jellyfin, jellystat, audiobookshelf, kavita, deadair]
+    services: [jellyfin, jellystat, audiobookshelf, kavita]
   - name: PVR / downloads
     services: [sonarr, radarr, prowlarr, deluge]
   - name: Monitoring

@@ -67,16 +67,6 @@ homelab_services:
         type: kavita
         url: http://kavita:5000
         key: "{{ homepage_widget_keys.kavita }}"
-  # AI radio station: plays from Spotify, with an AI presenter (roles/deadair)
-  deadair:
-    subdomain: radio
-    upstream: deadair:80
-    tile:
-      name: deadair
-      # No Dashboard Icons entry; the station serves its own
-      icon: "https://radio.{{ homeserver_domain }}/favicon.png"
-      description: AI radio station
-      container: deadair
   sonarr:
     subdomain: sonarr
     upstream: sonarr:8989

@@ -33,7 +33,6 @@ homeserver_caddy_ip: 10.40.0.2
 # app, and the app connects to its own index (the apps' keys aren't prefixed, so the index is
 # what keeps them apart)
 homeserver_redis_dbs:
-  deadair: 0
   homarr: 1
 
 # ESPHome dashboard login; also used by the Homepage ESPHome widget (password per environment)
