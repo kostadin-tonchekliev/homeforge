@@ -115,10 +115,12 @@ homarr_integrations:
 #             e.g. bearer or {type: apiKeyHeader, name: <header>}) and secret (the key it sends)
 #   requests  by request id, read in the template as data.<id> and status.<id>: path, plus
 #             optional source (default "default"), query and cacheSeconds
+#   options   optional, by option id, read in the template as options.<id>: label, control
+#             (e.g. text) and default
 homarr_custom_widgets:
   library:
     name: Media library
-    description: Movies, shows and episodes in Jellyfin, series in Kavita
+    description: Movies, shows and episodes in Jellyfin, series in Kavita, albums and songs in Navidrome
     icon: jellyfin
     sources:
       default:
@@ -128,6 +130,9 @@ homarr_custom_widgets:
         auth: {type: apiKeyHeader, name: x-api-key}
         # The same user API key as the Homepage widget; Stats needs an admin's
         secret: "{{ homepage_widget_keys.kavita }}"
+      # Navidrome's own Prometheus metrics (roles/navidrome): its integration would need a login
+      prometheus:
+        url: http://prometheus:9090
     requests:
       jellyfin:
         path: /Items/Counts
@@ -136,6 +141,12 @@ homarr_custom_widgets:
         source: kavita
         path: /api/Stats/server/stats
         cacheSeconds: 300
+      navidrome:
+        source: prometheus
+        path: /api/v1/query
+        cacheSeconds: 300
+        query:
+          query: db_model_totals{job="navidrome"}
   server:
     name: Server
     description: CPU, memory, system disk and uptime of the host, and Prometheus' targets
@@ -188,6 +199,44 @@ homarr_custom_widgets:
     requests:
       stats:
         path: /api/dashboard/stats
+  databases:
+    name: Databases
+    description: The shared PostgreSQL and Redis servers, from their exporters in Prometheus
+    icon: postgres
+    sources:
+      default:
+        url: http://prometheus:9090
+    requests:
+      # One query for every card, as in the server widget
+      databases:
+        path: /api/v1/query
+        cacheSeconds: 30
+        query:
+          query: >-
+            label_replace(sum(pg_database_size_bytes{job="postgres"}), "stat", "pg_size", "", "")
+            or label_replace(sum(pg_stat_activity_count{job="postgres"}), "stat", "pg_connections", "", "")
+            or label_replace(redis_memory_used_bytes{job="redis"}, "stat", "redis_memory", "", "")
+            or label_replace(sum(redis_db_keys{job="redis"}) or vector(0), "stat", "redis_keys", "", "")
+            or label_replace(rate(redis_commands_processed_total{job="redis"}[5m]), "stat", "redis_ops", "", "")
+            or label_replace(redis_connected_clients{job="redis"}, "stat", "redis_clients", "", "")
+  subwave:
+    name: SUB/WAVE now playing
+    description: The track on air, the DJ and the listeners of the SUB/WAVE radio station
+    icon: navidrome
+    sources:
+      # The controller's public API, inside the stack (Caddy serves it under /api)
+      default:
+        url: http://sub-wave-controller:7701
+    requests:
+      now:
+        path: /now-playing
+        cacheSeconds: 10
+    options:
+      # Cover art and avatars load in the browser, from the station's public URL
+      station_url:
+        label: Station URL
+        control: text
+        default: "https://radio.{{ homeserver_domain }}"
 
 # The board Ansible lays out, with the apps above and a widget per integration. It's only
 # filled while it doesn't exist or is empty: after that the layout is the UI's, so to start
@@ -215,18 +264,21 @@ homarr_board_home: true
 homarr_board_sections:
   - title: Media
     width: 6
-    apps: [jellyfin, jellystat, audiobookshelf, kavita]
+    apps: [jellyfin, jellystat, audiobookshelf, kavita, navidrome, subwave]
     widgets:
+      - kind: customApi
+        custom: library
+        width: 6
+      - kind: stats
+        stats:
+          audiobookshelf: {totalAudiobooks: Audiobooks, totalPodcasts: Podcasts}
+        width: 2
       - kind: stats
         stats:
           jellystat: {movies: Movies watched (30 d), episodes: Episodes watched (30 d)}
         width: 2
       - kind: customApi
-        custom: library
-        width: 4
-      - kind: stats
-        stats:
-          audiobookshelf: {totalAudiobooks: Audiobooks, totalPodcasts: Podcasts}
+        custom: subwave
         width: 2
       - kind: mediaServer
         integrations: [jellyfin]
@@ -252,7 +304,7 @@ homarr_board_sections:
         options:
           columns: [name, state, progress, downSpeed, upSpeed, ratio]
         width: 6
-        height: 2
+        height: 3
   - title: Server
     width: 6
     apps: [dockhand, grafana, prometheus, postgres]
@@ -265,6 +317,9 @@ homarr_board_sections:
         width: 6
       - kind: customApi
         custom: dockhand
+        width: 6
+      - kind: customApi
+        custom: databases
         width: 6
   - title: Network
     width: 6
@@ -285,16 +340,11 @@ homarr_board_sections:
         stats:
           caddy: {upstreams: Caddy upstreams, requestsFailed: Failed upstream requests}
         width: 2
-      - kind: stats
-        stats:
-          uptime_kuma:
-            totalMonitors: Monitors
-            upCount: Up
-            downCount: Down
-            pendingCount: Pending
-            maintenanceCount: In maintenance
-            averageUptimePercent: Uptime (24 h)
+      # The status page's summary and its monitors, problems first
+      - kind: uptimeKuma
+        integrations: [uptime_kuma]
         width: 6
+        height: 2
   - title: Upcoming
     width: 8
     widgets:

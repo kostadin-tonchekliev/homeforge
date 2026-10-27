@@ -47,3 +47,7 @@ prometheus_scrape_configs:
     scrape_interval: 15s
     static_configs:
       - targets: ["redis-exporter:9121"]
+  # Navidrome's own metrics (library totals, scans), over the proxy network
+  - job_name: navidrome
+    static_configs:
+      - targets: ["navidrome:4533"]
