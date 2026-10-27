@@ -70,7 +70,7 @@ All three are external networks, created by `roles/docker`.
 | Network | Subnet | Purpose |
 |---|---|---|
 | `proxy` | `10.40.0.0/24`, dynamic range `.128/25` | Everything Caddy fronts. **Caddy is pinned at 10.40.0.2**, which is the trusted-proxy IP for Jellyfin, GitLab and HA |
-| `db` | `10.41.0.0/24`, **internal** (no route out) | Apps that use the shared PostgreSQL |
+| `db` | `10.41.0.0/24`, **internal** (no route out) | Apps that use the shared PostgreSQL or Redis |
 | `arr_network` | `172.22.0.0/16` | Deluge, Flaresolverr, Prowlarr, Sonarr, Radarr |
 
 Don't use `172.32.0.0`+ for new networks: those addresses aren't private.
@@ -102,8 +102,9 @@ publish its port (or publish it on `127.0.0.1`) and let Caddy reach it over `pro
 | Caddy | `caddy` | `caddy-cloudflare:latest` (built from `caddy:builder` + `caddy:latest`) | proxy (10.40.0.2) | (all) | 80, 443, 443/udp | – |
 | Pi-hole | `pihole` | `pihole/pihole:latest` | proxy | `pihole` | 53 tcp/udp on 192.168.1.113 | – |
 | PostgreSQL 17 + exporter | `postgres` | **`postgres:17` (pinned major)**, `prometheuscommunity/postgres-exporter` | db, default | – | 5432 on 127.0.0.1 only | is the DB |
+| Redis + exporter | `redis` | `redis`, `oliver006/redis_exporter` | db | – | – | is the cache |
 | Homepage + socket proxy | `gethomepage` | `ghcr.io/gethomepage/homepage`, `tecnativa/docker-socket-proxy` | proxy, socket | (bare domain) | – | – |
-| Homarr + socket proxy (trial) | `homarr` | `ghcr.io/homarr-labs/homarr`, `tecnativa/docker-socket-proxy` | proxy, db, socket | `homarr` | 7575 on 127.0.0.1 only | `homarr` |
+| Homarr + socket proxy (trial) | `homarr` | `ghcr.io/homarr-labs/homarr`, `tecnativa/docker-socket-proxy` | proxy, db, socket | `homarr` | 7575 on 127.0.0.1 only | `homarr` (+ Redis db 1) |
 | Jellyfin | `jellyfin` | `jellyfin/jellyfin:latest` | **host** (8096) | `jellyfin` | (host 8096, 7359/udp) | SQLite |
 | Jellystat | `jellystat` | `cyfershepard/jellystat` | proxy, db | `jellystat` | 3005 | `jfstat` |
 | Deluge | `deluge` | **`lscr.io/linuxserver/deluge:2.2.0-r1-ls364` (pinned)** | arr_network, proxy | `deluge` | 8112, 6881 tcp/udp | – |
@@ -113,6 +114,8 @@ publish its port (or publish it on `127.0.0.1`) and let Caddy reach it over `pro
 | Radarr | `radarr` | `lscr.io/linuxserver/radarr` | arr_network, proxy, db | `radarr` | 7878 | `radarr-main/-log` |
 | Audiobookshelf | `audiobookshelf` | `ghcr.io/advplyr/audiobookshelf` | proxy | `abs` | 13378 | SQLite |
 | Kavita | `kavita` | `jvmilazz0/kavita` | proxy | `kavita` | 5000 | SQLite |
+| Navidrome | `navidrome` | `navidrome/navidrome` | proxy | `music` | – | SQLite |
+| SUB/WAVE (5 containers) | `subwave` | `ghcr.io/perminder-klair/subwave-{broadcast,controller,web,analyzer}`, `tecnativa/docker-socket-proxy` | default, proxy, socket | `radio` | – | SQLite |
 | Prometheus | `prometheus` | `prom/prometheus` | proxy, db | `prometheus` | – | TSDB, 15 d |
 | node_exporter | `node_exporter` | `prom/node-exporter` | **host** (9100), host PID | – | (host 9100) | – |
 | Grafana | `grafana` | `grafana/grafana` | proxy, db | `grafana` | – | `grafana` |
@@ -150,10 +153,25 @@ Notes:
   10.40.0.2) in its UI storage (`.storage/http`), not in YAML. On a fresh install it has to
   be set once in the UI.
 - **Prometheus** scrapes `node` (host.docker.internal:9100), `cadvisor`, `caddy`
-  (`caddy:2020`), `postgres` (`postgres-exporter:9187`) and itself. **Each target keeps
+  (`caddy:2020`), `postgres` (`postgres-exporter:9187`), `redis` (`redis-exporter:9121`,
+  added later, so it has no old label to keep) and itself. **Each target keeps
   the `instance` label it had when Prometheus ran on the host** (`localhost:9100`,
   `localhost:8080`, `10.40.0.2:2020`, `127.0.0.1:9187`), so history stays continuous. Keep
   those labels if you touch the targets.
+- **Navidrome** serves the music library `navidrome_music_dir` (`/media/music`, setgid
+  `2775`, group `media`), which the owner fills by hand. It runs as the server user and the
+  `media` group and mounts the library read-only. Its users (the first one, made in its UI,
+  is the admin) and settings are app state.
+- **SUB/WAVE** is an AI radio station playing the Navidrome library: icecast + liquidsoap
+  (`sub-wave-broadcast`), the AI DJ (`sub-wave-controller`), the UI (`sub-wave-web`) and an
+  acoustic analyzer, mirroring upstream's compose file without its own Caddy and without
+  the optional GPU-sized `tts-heavy` voices. Caddy routes `radio.` by path
+  (`caddy_routes`): the streams (unbuffered), `/api/*` with the prefix stripped, the tune-in
+  files, and a 404 for Icecast's internal `/api/listener-auth` callback. Its Navidrome
+  login, LLM, voice and personas are set in its first-run wizard and kept in
+  `/opt/subwave/state` (`settings.json`, `library.db`), which the broadcast container makes
+  `1777` itself; the Icecast passwords are generated there too. It reaches Navidrome as
+  `http://navidrome:4533` over `proxy`. Its admin login is `subwave_admin_password`.
 - **Caddy's `:2020` listener** is internal and not published. It serves `/metrics` and a
   read-only `/reverse_proxy/upstreams` for the Homepage widget. The admin API stays on
   localhost:2019.
@@ -171,7 +189,31 @@ Notes:
 - `/opt/postgres/README.md` (from `roles/postgres/files/README.md`) is the runbook for
   manual backup and restore.
 - **Staying on SQLite** because there's no Postgres support: Jellyfin, Uptime Kuma,
-  Kavita, Audiobookshelf, Pi-hole, Dockhand, ntopng.
+  Kavita, Audiobookshelf, Pi-hole, Dockhand, ntopng, Navidrome, SUB/WAVE.
+
+### Shared Redis
+
+- One server (`redis:latest`, `/opt/redis`), reached as `redis:6379` over the `db` network.
+  No published port.
+- **One ACL user and one database index per app**, from `homeserver_redis_dbs` in
+  `group_vars/homeserver/main.yml` (shared, because the apps' roles read their index from it).
+  The apps' keys aren't prefixed, so the index is what keeps them apart; ACLs can't restrict
+  a user to one index, so it's separation, not isolation.
+- `roles/redis` renders `conf/users.acl` with SHA-256 hashes of the passwords
+  (`redis_app_passwords`, the vault in prod). App users get everything but `@admin` and
+  `FLUSHALL`. The default user (no password) may only `PING`, for the healthcheck. The
+  `exporter` user (`redis_exporter_password`) may only read server stats.
+- Redis reads the ACL file only at start, so the file's hash is a label of the container:
+  a change of users makes compose recreate it, even in a run that changes other things too
+  (`compose_app`'s restart-on-config-change only fires when compose recreated nothing).
+- `redis-exporter` (same stack) feeds Prometheus job `redis` and the Grafana "Redis"
+  dashboard.
+- Users today: Homarr (db 1, its cache, job queues and pub/sub, instead of the Redis bundled
+  in its image), which is disposable: losing it only empties Homarr's cache. Persistence is
+  Redis' default RDB snapshots in `data/`.
+- Pub/sub channels are global, not per database index. Homarr's are all `pubSub:*`.
+- GitLab and ntopng keep their own bundled Redis: GitLab's is managed by Omnibus and busy
+  enough to be worth keeping apart, and ntopng (host network) can't reach the `db` network.
 
 ### Media pipeline and file permissions
 
@@ -220,7 +262,7 @@ Jellyfin specifics:
 - Grafana is provisioned from files. The data sources (`prometheus` uid `belryhxaxsu0we`,
   plus a dead `influxdb`) are in `/opt/grafana/provisioning/datasources/homelab.yaml`. The
   dashboards ("Node Exporter Full", "Docker Host & Container Overview", "Caddy",
-  "PostgreSQL") are in `/opt/grafana/data/dashboards/{general,homelab}`. Keep data source
+  "PostgreSQL", "Redis") are in `/opt/grafana/data/dashboards/{general,homelab}`. Keep data source
   UIDs stable, because the dashboards reference them.
 - **Uptime Kuma** has 27 monitors, mostly hitting the Caddy URLs. Its monitors are app
   state: add one by hand in its UI for each new service.
@@ -246,8 +288,8 @@ inventory/
 playbooks/
   setup.yml            imports base, core, media, monitoring, apps; every role is tagged with its name
   base.yml             common, firewall, docker
-  core.yml             caddy, pihole, postgres
-  media.yml            jellyfin, deluge, flaresolverr, prowlarr, sonarr, radarr, jellystat, audiobookshelf, kavita
+  core.yml             caddy, pihole, postgres, redis
+  media.yml            jellyfin, deluge, flaresolverr, prowlarr, sonarr, radarr, jellystat, audiobookshelf, kavita, navidrome, subwave
   monitoring.yml       node_exporter, cadvisor, prometheus, grafana, uptime_kuma, ntopng
   apps.yml             homepage, homarr, home_assistant, esphome, ollama, gitlab, dockhand
   update.yml           apt dist-upgrade, then every play again with pull/build = always, then prune dangling images
@@ -311,8 +353,9 @@ roles/<service>/
 
 `inventory/group_vars/homeserver/services.yml` → `homelab_services`, keyed by service id:
 - `subdomain` (`""` = the bare domain) and `upstream` (`container:port` on `proxy`, or
-  `host.docker.internal:port`) feed **the Caddyfile**. `caddy_matcher` and
-  `caddy_directives` are optional.
+  `host.docker.internal:port`) feed **the Caddyfile**. `caddy_matcher`,
+  `caddy_directives` and `caddy_routes` (routes by path, tried before `upstream`) are
+  optional.
 - `tile` feeds **Homepage's `services.yaml`**: name, icon, description, `container` (which
   gives a status dot via `my-docker`), `widget` and an optional `href`. Widget keys come
   from `homepage_widget_keys` (the vault in prod).
@@ -326,9 +369,12 @@ roles/<service>/
   - the Cloudflare token;
   - the Pi-hole, Postgres superuser and exporter passwords, and every app's DB password
     (`vault_postgres_app_passwords.<role>`);
+  - every app's Redis password (`vault_redis_app_passwords.<user>`) and the Redis exporter's
+    (`vault_redis_exporter_password`);
   - the Homepage widget keys, the Deluge and ESPHome passwords;
   - Home Assistant `secrets.yaml` values;
   - the GitLab runner tokens and the Jellystat JWT secret;
+  - the SUB/WAVE admin password (`vault_subwave_admin_password`);
   - the Homarr encryption key (`vault_homarr_secret_encryption_key`, never change it) and
     API key (`vault_homarr_api_key`, optional until the onboarding is done).
 
@@ -382,12 +428,16 @@ Run the sandbox twice after a change to prove idempotence; the second run must r
 2. **`roles/<service>/`:** `defaults/main.yml`, `tasks/main.yml` (include `compose_app`)
    and `templates/docker-compose.yaml.j2`. In the compose file:
    - `container_name: <name>`, `restart: unless-stopped`, `TZ={{ homeserver_timezone }}`;
-   - join `proxy` (external), plus `db` if it uses Postgres;
+   - join `proxy` (external), plus `db` if it uses Postgres or Redis;
    - **don't publish ports** unless the LAN must reach it directly;
    - use `:latest`, and an image that exists for amd64 **and** arm64;
    - if it touches `/media`, follow the media permission model.
 3. **Postgres?** Add `{role, databases, extensions?}` to `postgres_apps`, a vault password
    `vault_postgres_app_passwords.<role>` (and the dev dummy), and pass it in through
+   `compose_app_env`.
+   **Redis?** Use the shared server rather than bundling one: add `<user>: <next free index>`
+   to `homeserver_redis_dbs`, a vault password `vault_redis_app_passwords.<user>` (and the
+   dev dummy), and pass the user, password (percent-encoded in a URL) and index in through
    `compose_app_env`.
 4. **Web UI?** Add an entry to `homelab_services` (subdomain, upstream, tile), and its id
    to a `caddy_sections` entry and a `homepage_groups` entry.
@@ -443,7 +493,9 @@ Run the sandbox twice after a change to prove idempotence; the second run must r
 - **`update.yml` never reboots.** It reports when `/var/run/reboot-required` exists.
 - **The Mac needs Python 3.12–3.14** (`setup.sh` picks one) and a copy of `.vault_pass`.
 - **Dry runs:** steps that need a Python library on the target (psycopg2, lxml) skip
-  themselves with a message in check mode when the library isn't installed yet.
+  themselves with a message in check mode when the library isn't installed yet. So do the
+  steps that need something a dry run doesn't really create: `docker compose` for a new
+  stack, and the privileges and extensions of a new database.
 - **GitLab's container writes some `/opt/gitlab` files as uid 996.** On the host that
   number has no name (it used to be the `prometheus` user). That's harmless.
 
@@ -455,7 +507,9 @@ These live only on the server and are **not backed up**:
 - Home Assistant's `.storage`, `automations.yaml`, HACS, `zigbee.db`;
 - GitLab repositories, uploads and `config/gitlab-secrets.json`;
 - the data of Kavita, Audiobookshelf, Uptime Kuma (including its monitors), Pi-hole,
-  Deluge (torrent state), ESPHome device configs, Dockhand, and Ollama's models;
+  Deluge (torrent state), ESPHome device configs, Dockhand, Ollama's models, Navidrome's
+  users and settings, and SUB/WAVE's state (`/opt/subwave/state`: settings, personas,
+  `library.db` with the LLM's tags for the library);
 - app settings made in UIs: Sonarr/Radarr/Prowlarr indexers, download clients and quality
   profiles; Jellyfin plugins such as Trakt; Jellystat's Jellyfin URL.
 
@@ -463,7 +517,8 @@ After a fresh rebuild without that state:
 - set Home Assistant's trusted proxy in its UI;
 - put the new apps' API keys into `vault_homepage_widget_keys`;
 - re-register the GitLab runners and update `vault_gitlab_runner_tokens`;
-- finish Homarr's onboarding, create an API key and update `vault_homarr_api_key`.
+- finish Homarr's onboarding, create an API key and update `vault_homarr_api_key`;
+- create Navidrome's admin, then run SUB/WAVE's wizard with a Navidrome login.
 
 ## Known issues the owner has chosen to leave
 

@@ -25,6 +25,10 @@ postgres_app_passwords:
 
 grafana_db_password: dev-grafana
 
+redis_app_passwords:
+  homarr: dev-homarr-redis
+redis_exporter_password: dev-redis-exporter
+
 # Homepage widgets can't authenticate in the sandbox (fresh apps have other keys); that's fine
 homepage_widget_keys:
   jellyfin: dev-key
@@ -52,6 +56,8 @@ gitlab_runner_tokens:
   runner-2: dev-not-registered
 
 jellystat_jwt_secret: dev-jellystat-jwt
+
+subwave_admin_password: dev-subwave
 
 homarr_secret_encryption_key: "de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7de7d"
 # No API key: it only exists after the onboarding in the sandbox's Homarr, so the apps and

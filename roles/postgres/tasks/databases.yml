@@ -13,6 +13,11 @@
 
 - name: databases | Manage the app logins, databases and extensions
   when: not (ansible_check_mode and postgres_psycopg2.changed)
+  vars:
+    # What "Create the app databases" (would have) created
+    postgres_new_databases: >-
+      {{ postgres_databases.results | default([]) | selectattr('changed')
+      | map(attribute='item.1') | list }}
   block:
     - name: databases | Create the app logins
       community.postgresql.postgresql_user:
@@ -58,7 +63,9 @@
       loop: "{{ postgres_apps | subelements('databases') }}"
       loop_control:
         label: "{{ item.1 }}"
+      register: postgres_databases
 
+    # A dry run doesn't really create a new database, so the next two steps skip those
     - name: databases | Stop other logins from connecting to the app databases
       community.postgresql.postgresql_privs:
         login_db: postgres
@@ -73,6 +80,7 @@
       loop: "{{ postgres_apps | subelements('databases') }}"
       loop_control:
         label: "{{ item.1 }}"
+      when: not (ansible_check_mode and item.1 in postgres_new_databases)
 
     - name: databases | Create the extensions the apps need
       community.postgresql.postgresql_ext:
@@ -84,3 +92,4 @@
       loop: "{{ postgres_apps | subelements('extensions', skip_missing=true) }}"
       loop_control:
         label: "{{ item.0.databases[0] }}: {{ item.1 }}"
+      when: not (ansible_check_mode and item.0.databases[0] in postgres_new_databases)

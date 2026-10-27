@@ -8,7 +8,10 @@
 #                     or host.docker.internal:<port> for services running on the host
 #   caddy_matcher     name of the Caddy matcher (default: the subdomain)
 #   caddy_directives  extra Caddy directives placed before reverse_proxy
-#   tile              the Homepage tile: name, plus any Homepage service options (icon,
+#   caddy_routes      routes by path, tried before upstream (which then gets the rest):
+#                     paths, plus upstream (and options for its reverse_proxy block) or
+#                     respond; strip_prefix: true strips its one path prefix (handle_path)
+#   tile             the Homepage tile: name, plus any Homepage service options (icon,
 #                     description, container, widget...). href defaults to the service URL;
 #                     container implies the "my-docker" status server.
 homelab_services:
@@ -67,6 +70,41 @@ homelab_services:
         type: kavita
         url: http://kavita:5000
         key: "{{ homepage_widget_keys.kavita }}"
+  navidrome:
+    subdomain: music
+    upstream: navidrome:4533
+    tile:
+      name: Navidrome
+      icon: navidrome
+      description: Music library
+      container: navidrome
+  # AI radio station playing the Navidrome library (roles/subwave). Routes as in its
+  # docker/Caddyfile; everything else goes to the web UI.
+  subwave:
+    subdomain: radio
+    upstream: sub-wave-web:7700
+    caddy_routes:
+      # The live streams, unbuffered
+      - paths: [/stream.mp3, /stream.opus, /stream.flac, /stream.aac]
+        upstream: sub-wave-broadcast:7702
+        options: [flush_interval -1]
+      # Icecast's listener-auth callback reaches the controller inside the stack; from
+      # outside it would be an unthrottled password oracle
+      - paths: [/api/listener-auth*]
+        respond: 404
+      # The controller's API, without the /api prefix
+      - paths: [/api/*]
+        strip_prefix: true
+        upstream: sub-wave-controller:7701
+      # Tune-in files, at the controller's root
+      - paths: [/listen.pls, /listen.m3u]
+        upstream: sub-wave-controller:7701
+    tile:
+      name: SUB/WAVE
+      # No Dashboard Icons entry; the station serves its own
+      icon: "https://radio.{{ homeserver_domain }}/icons/192"
+      description: AI radio station
+      container: sub-wave-controller
   sonarr:
     subdomain: sonarr
     upstream: sonarr:8989

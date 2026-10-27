@@ -18,6 +18,7 @@
     owner: "{{ homeserver_user }}"
     group: "{{ homeserver_user }}"
     mode: "0755"
+  register: compose_app_dir_result
 
 - name: main | Create the stack's data directories
   ansible.builtin.file:
@@ -72,6 +73,12 @@
     group: "{{ homeserver_user }}"
     mode: "{{ compose_app_compose_mode }}"
 
+# A dry run doesn't really create a new stack's directory, so compose has nothing to read
+- name: main | Say why the new stack isn't checked
+  ansible.builtin.debug:
+    msg: "Dry run: {{ compose_app_dir }} doesn't exist yet, so the stack isn't checked."
+  when: ansible_check_mode and compose_app_dir_result.changed
+
 - name: main | Start the stack
   community.docker.docker_compose_v2:
     project_src: "{{ compose_app_dir }}"
@@ -80,9 +87,11 @@
     build: "{{ compose_app_build }}"
     wait: "{{ compose_app_wait }}"
   register: compose_app_up
+  when: not (ansible_check_mode and compose_app_dir_result.changed)
 
 - name: main | Apply changed config files
   when:
+    - compose_app_up is not skipped
     - not compose_app_up.changed
     - (compose_app_templates_result.changed or compose_app_files_result.changed)
     - compose_app_on_config_change != 'none'

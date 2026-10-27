@@ -1,5 +1,5 @@
 ---
-- name: Core services (reverse proxy, DNS, database)
+- name: Core services (reverse proxy, DNS, database, cache)
   hosts: homeserver
   roles:
     - role: caddy
@@ -8,3 +8,5 @@
       tags: [pihole]
     - role: postgres
       tags: [postgres]
+    - role: redis
+      tags: [redis]

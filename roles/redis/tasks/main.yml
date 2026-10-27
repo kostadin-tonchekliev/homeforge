@@ -1,0 +1,20 @@
+---
+- name: main | Deploy the Redis stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: redis
+    compose_app_dirs:
+      # The redis entrypoint chowns data/ to its own uid
+      - path: data
+      - path: conf
+        mode: "0755"
+    compose_app_env:
+      EXPORTER_PASSWORD: "{{ redis_exporter_password }}"
+    compose_app_templates:
+      - src: users.acl.j2
+        dest: conf/users.acl
+    # The ACL file's hash is a label of the container, so compose recreates it when it changes
+    compose_app_on_config_change: none
+    # Apps connect right after, so wait for the healthcheck
+    compose_app_wait: true

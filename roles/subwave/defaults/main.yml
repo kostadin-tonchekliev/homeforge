@@ -1,0 +1,4 @@
+---
+# Login of the admin UI and the first-run wizard (the controller refuses to boot without it)
+subwave_admin_user: admin
+subwave_admin_password: ""

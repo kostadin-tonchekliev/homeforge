@@ -1,0 +1,21 @@
+---
+# Setgid and group media, like the other media directories, so whatever is copied in stays
+# readable by the media group Navidrome runs as
+- name: main | Create the music library
+  ansible.builtin.file:
+    path: "{{ navidrome_music_dir }}"
+    state: directory
+    owner: "{{ homeserver_user }}"
+    group: "{{ homeserver_media_group }}"
+    mode: "2775"
+
+- name: main | Deploy the Navidrome stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: navidrome
+    compose_app_dirs:
+      # The container runs as the server user, which must own its database and cache
+      - path: data
+        owner: "{{ homeserver_user }}"
+        group: "{{ homeserver_media_group }}"

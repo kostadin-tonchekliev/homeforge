@@ -17,6 +17,8 @@ homarr_apps:
   - jellystat
   - audiobookshelf
   - kavita
+  - navidrome
+  - subwave
   - sonarr
   - radarr
   - prowlarr

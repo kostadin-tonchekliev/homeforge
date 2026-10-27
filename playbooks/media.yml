@@ -1,5 +1,5 @@
 ---
-- name: Media (Jellyfin, downloads, *arr, books)
+- name: Media (Jellyfin, downloads, *arr, books, music)
   hosts: homeserver
   roles:
     - role: jellyfin
@@ -20,3 +20,7 @@
       tags: [audiobookshelf]
     - role: kavita
       tags: [kavita]
+    - role: navidrome
+      tags: [navidrome]
+    - role: subwave
+      tags: [subwave]

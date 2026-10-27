@@ -1,0 +1,6 @@
+---
+# Password of each app's user; the apps and their database index are homeserver_redis_dbs
+redis_app_passwords: {}
+
+# Login of redis-exporter (server stats only)
+redis_exporter_password: ""

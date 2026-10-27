@@ -42,3 +42,8 @@ prometheus_scrape_configs:
       - targets: ["postgres-exporter:9187"]
         labels:
           instance: 127.0.0.1:9187
+  # redis-exporter, over the internal db network
+  - job_name: redis
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["redis-exporter:9121"]

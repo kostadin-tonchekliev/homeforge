@@ -1,0 +1,15 @@
+---
+- name: main | Deploy the SUB/WAVE stack
+  ansible.builtin.include_role:
+    name: compose_app
+  vars:
+    compose_app_name: subwave
+    compose_app_dirs:
+      # The broadcast container makes it 1777 itself: the controller, analyzer and liquidsoap
+      # write there as different uids
+      - path: state
+    # The controller reads the whole .env (env_file), as upstream's compose does
+    compose_app_env:
+      ADMIN_USER: "{{ subwave_admin_user }}"
+      ADMIN_PASS: "{{ subwave_admin_password }}"
+      SITE_URL: "https://radio.{{ homeserver_domain }}"

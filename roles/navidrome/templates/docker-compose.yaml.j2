@@ -1,0 +1,22 @@
+---
+services:
+  navidrome:
+    image: navidrome/navidrome:latest
+    container_name: navidrome
+    # The server user and the media group (see the media permission model): owns data/ and
+    # reads the library
+    user: "{{ homeserver_uid }}:{{ homeserver_media_gid }}"
+    restart: unless-stopped
+    environment:
+      TZ: {{ homeserver_timezone }}
+    volumes:
+      - /opt/navidrome/data:/data
+      - {{ navidrome_music_dir }}:/music:ro
+    # No published port: Caddy (https://music.{{ homeserver_domain }}) and SUB/WAVE reach it
+    # as navidrome:4533 over proxy
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true

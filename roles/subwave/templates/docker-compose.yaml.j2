@@ -1,0 +1,135 @@
+---
+# SUB/WAVE: upstream's docker-compose.yml without its own Caddy edge (our Caddy routes
+# https://radio.{{ homeserver_domain }}, see services.yml) and without the optional GPU-sized
+# tts-heavy voices. Music comes from Navidrome over the Subsonic API; the Navidrome login,
+# the LLM and the voice are set in its first-run wizard and kept in state/settings.json.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # icecast2 + liquidsoap in one container
+  broadcast:
+    image: ghcr.io/perminder-klair/subwave-broadcast:latest
+    container_name: sub-wave-broadcast
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      # The Icecast passwords are generated on first boot into state/icecast-secrets.env
+      # Caddy's address, so Icecast reads real listener IPs from X-Forwarded-For
+      - ICECAST_TRUSTED_PROXY_IPS={{ homeserver_caddy_ip }}
+      # Keeps the hourly archive paths on local wall time
+      - TZ={{ homeserver_timezone }}
+    volumes:
+      - /opt/subwave/state:/var/sub-wave
+      - /opt/subwave/state/logs:/var/log/liquidsoap
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:7702/status-json.xsl > /dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+    # proxy: Caddy serves the streams, and liquidsoap fetches tracks from navidrome:4533
+    networks:
+      - default
+      - proxy
+
+  # The AI DJ
+  controller:
+    image: ghcr.io/perminder-klair/subwave-controller:latest
+    container_name: sub-wave-controller
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      broadcast:
+        condition: service_healthy
+      docker-socket-proxy:
+        condition: service_started
+    environment:
+      # Enables the admin gate (ADMIN_USER + ADMIN_PASS, from .env)
+      - NODE_ENV=production
+      # Schedule slots use local hours
+      - TZ={{ homeserver_timezone }}
+      - STATE_DIR=/var/sub-wave
+      - SOUNDS_DIR=/sounds
+      - ANALYZE_URL=http://analyzer:8080
+      # Container stats for the admin Stats panel, through the read-only socket proxy
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
+    env_file:
+      - ./.env
+    volumes:
+      - /opt/subwave/state:/var/sub-wave
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:7701/health > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    # proxy: Caddy serves /api, and it reaches navidrome:4533 and the internet (LLM APIs)
+    networks:
+      - default
+      - proxy
+      - socket
+
+  # Read-only Docker API: only GET /containers, so the controller never holds the raw socket
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: sub-wave-docker-proxy
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      - CONTAINERS=1
+      - POST=0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - socket
+
+  # Next.js listener and admin UI
+  web:
+    image: ghcr.io/perminder-klair/subwave-web:latest
+    container_name: sub-wave-web
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      controller:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - SUBWAVE_HOMEPAGE=player
+      - SUBWAVE_DJ_BRAIN_ENABLED=false
+      - SITE_URL=${SITE_URL}
+      - CONTROLLER_INTERNAL_URL=http://controller:7701
+    networks:
+      - default
+      - proxy
+
+  # Acoustic analysis (bpm, key, intros, loudness): the lean image, without CLAP/Demucs
+  analyzer:
+    image: ghcr.io/perminder-klair/subwave-analyzer:latest
+    container_name: sub-wave-analyzer
+    restart: unless-stopped
+    logging: *default-logging
+    # A runaway analysis dies here instead of waking the host's OOM killer
+    mem_limit: 6g
+    volumes:
+      - /opt/subwave/state:/var/sub-wave
+      # A named volume, so it starts out owned by the image's uid 10001
+      - analyzer-cache:/opt/analyzer/hf-cache
+    # proxy: it can fetch a track from navidrome:4533 by URL
+    networks:
+      - default
+      - proxy
+
+volumes:
+  analyzer-cache:
+
+networks:
+  default:
+  proxy:
+    external: true
+  socket:
+    internal: true
