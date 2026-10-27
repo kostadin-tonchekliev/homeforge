@@ -73,6 +73,10 @@ homelab_services:
   navidrome:
     subdomain: music
     upstream: navidrome:4533
+    caddy_routes:
+      # Its Prometheus metrics are for Prometheus only, which scrapes navidrome:4533 directly
+      - paths: [/metrics]
+        respond: 404
     tile:
       name: Navidrome
       icon: navidrome

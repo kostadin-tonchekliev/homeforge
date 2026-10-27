@@ -142,8 +142,9 @@ Notes:
   created in the UI after the onboarding, so until it's in the vault that step is skipped.
   Items are matched by name and only ever created. So are its custom widgets
   (`homarr_custom_widgets`, templates in `roles/homarr/files/custom_widgets/*.jsx`, Homarr's
-  restricted JSX): library counts (Jellyfin via its integration, Kavita via `x-api-key`), host
-  stats and `/media` free space (Prometheus queries) and Dockhand stats; to change one,
+  restricted JSX): library counts (Jellyfin via its integration, Kavita via `x-api-key`,
+  Navidrome via its Prometheus metrics), host stats, `/media` free space and PostgreSQL/Redis
+  (Prometheus queries), Dockhand stats and SUB/WAVE's public `/now-playing`; to change one,
   delete it in Manage → Custom widgets and rerun. It also lays out the `homelab` board
   (`homarr_board_sections`: containers of apps and widgets, sized so the rows have no holes),
   but only while that board doesn't exist or is empty; after that its layout is UI state. Its
@@ -153,15 +154,18 @@ Notes:
   10.40.0.2) in its UI storage (`.storage/http`), not in YAML. On a fresh install it has to
   be set once in the UI.
 - **Prometheus** scrapes `node` (host.docker.internal:9100), `cadvisor`, `caddy`
-  (`caddy:2020`), `postgres` (`postgres-exporter:9187`), `redis` (`redis-exporter:9121`,
-  added later, so it has no old label to keep) and itself. **Each target keeps
+  (`caddy:2020`), `postgres` (`postgres-exporter:9187`), `redis` (`redis-exporter:9121`)
+  and `navidrome` (`navidrome:4533`, its own metrics), both added later so with no old label
+  to keep, and itself. **Each target keeps
   the `instance` label it had when Prometheus ran on the host** (`localhost:9100`,
   `localhost:8080`, `10.40.0.2:2020`, `127.0.0.1:9187`), so history stays continuous. Keep
   those labels if you touch the targets.
 - **Navidrome** serves the music library `navidrome_music_dir` (`/media/music`, setgid
   `2775`, group `media`), which the owner fills by hand. It runs as the server user and the
   `media` group and mounts the library read-only. Its users (the first one, made in its UI,
-  is the admin) and settings are app state.
+  is the admin) and settings are app state. Its Prometheus metrics are on
+  (`ND_PROMETHEUS_ENABLED`; library totals for the Homarr board): Prometheus scrapes
+  `navidrome:4533/metrics` over `proxy`, and Caddy answers `/metrics` on `music.` with a 404.
 - **SUB/WAVE** is an AI radio station playing the Navidrome library: icecast + liquidsoap
   (`sub-wave-broadcast`), the AI DJ (`sub-wave-controller`), the UI (`sub-wave-web`) and an
   acoustic analyzer, mirroring upstream's compose file without its own Caddy and without
@@ -264,7 +268,8 @@ Jellyfin specifics:
   dashboards ("Node Exporter Full", "Docker Host & Container Overview", "Caddy",
   "PostgreSQL", "Redis") are in `/opt/grafana/data/dashboards/{general,homelab}`. Keep data source
   UIDs stable, because the dashboards reference them.
-- **Uptime Kuma** has 27 monitors, mostly hitting the Caddy URLs. Its monitors are app
+- **Uptime Kuma** has 36 monitors: HTTP ones on the Caddy URLs for the web UIs, Docker ones
+  for containers without a UI of their own (Postgres, Redis, the SUB/WAVE backends…). Its monitors are app
   state: add one by hand in its UI for each new service.
 - ntopng watches `eno1` for "who connects to the server".
 

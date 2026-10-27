@@ -9,6 +9,8 @@ services:
     restart: unless-stopped
     environment:
       TZ: {{ homeserver_timezone }}
+      # /metrics for Prometheus (library totals for the Homarr board); Caddy keeps it off music.
+      ND_PROMETHEUS_ENABLED: "true"
     volumes:
       - /opt/navidrome/data:/data
       - {{ navidrome_music_dir }}:/music:ro
