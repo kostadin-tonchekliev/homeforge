@@ -51,8 +51,8 @@ now containers.
 
 ### Access: LAN only, HTTPS everywhere
 
-- Every web UI is `https://<subdomain>.home.tonchekliev.info`. The dashboard (Homepage) is
-  the bare `https://home.tonchekliev.info`.
+- Every web UI is `https://<subdomain>.home.tonchekliev.info`. The dashboard (Homarr) is
+  the bare `https://home.tonchekliev.info`; Homepage, the previous one, is at `homepage.`.
 - **Pi-hole** is the LAN DNS. A dnsmasq wildcard resolves `home.tonchekliev.info` and
   every subdomain to `192.168.1.113`. **There are no public DNS records** for these
   names; never add any. Don't touch the apex `tonchekliev.info` either: it's a Cloudflare
@@ -103,8 +103,8 @@ publish its port (or publish it on `127.0.0.1`) and let Caddy reach it over `pro
 | Pi-hole | `pihole` | `pihole/pihole:latest` | proxy | `pihole` | 53 tcp/udp on 192.168.1.113 | – |
 | PostgreSQL 17 + exporter | `postgres` | **`postgres:17` (pinned major)**, `prometheuscommunity/postgres-exporter` | db, default | – | 5432 on 127.0.0.1 only | is the DB |
 | Redis + exporter | `redis` | `redis`, `oliver006/redis_exporter` | db | – | – | is the cache |
-| Homepage + socket proxy | `gethomepage` | `ghcr.io/gethomepage/homepage`, `tecnativa/docker-socket-proxy` | proxy, socket | (bare domain) | – | – |
-| Homarr + socket proxy (trial) | `homarr` | `ghcr.io/homarr-labs/homarr`, `tecnativa/docker-socket-proxy` | proxy, db, socket | `homarr` | 7575 on 127.0.0.1 only | `homarr` (+ Redis db 1) |
+| Homepage + socket proxy | `gethomepage` | `ghcr.io/gethomepage/homepage`, `tecnativa/docker-socket-proxy` | proxy, socket | `homepage` | – | – |
+| Homarr + socket proxy | `homarr` | `ghcr.io/homarr-labs/homarr`, `tecnativa/docker-socket-proxy` | proxy, db, socket | (bare domain) | 7575 on 127.0.0.1 only | `homarr` (+ Redis db 1) |
 | Jellyfin | `jellyfin` | `jellyfin/jellyfin:latest` | **host** (8096) | `jellyfin` | (host 8096, 7359/udp) | SQLite |
 | Jellystat | `jellystat` | `cyfershepard/jellystat` | proxy, db | `jellystat` | 3005 | `jfstat` |
 | Deluge | `deluge` | **`lscr.io/linuxserver/deluge:2.2.0-r1-ls364` (pinned)** | arr_network, proxy | `deluge` | 8112, 6881 tcp/udp | – |
@@ -135,8 +135,7 @@ Notes:
   `clone_url = https://gitlab.home…`. Its SSH port is 222.
 - **Homepage** never gets the raw Docker socket. It reads container status through
   `homepage-dockerproxy`, which is read-only and allows only `CONTAINERS`.
-- **Homarr** is on trial as a Homepage replacement, at its own subdomain; Homepage stays on
-  the bare domain. Its apps and integrations live in its database, not in files.
+- **Homarr** is the main dashboard on the bare domain; Homepage stays at `homepage.`. Its apps and integrations live in its database, not in files.
   `roles/homarr` registers the missing ones (`homarr_apps`, `homarr_integrations`) through
   the tRPC API its UI uses, authenticated with `homarr_api_key`. That key can only be
   created in the UI after the onboarding, so until it's in the vault that step is skipped.

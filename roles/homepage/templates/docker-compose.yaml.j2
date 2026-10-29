@@ -4,12 +4,12 @@ services:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
     environment:
-      HOMEPAGE_ALLOWED_HOSTS: {{ homeserver_domain }}
+      HOMEPAGE_ALLOWED_HOSTS: homepage.{{ homeserver_domain }}
       PUID: {{ homeserver_uid }}
       PGID: {{ homeserver_gid }}
     # HOMEPAGE_VAR_* secrets used in services.yaml (e.g. Pi-hole password)
     env_file: .env
-    # Served by Caddy at https://{{ homeserver_domain }} (port 80 now belongs to Caddy)
+    # Served by Caddy at https://homepage.{{ homeserver_domain }} (port 80 now belongs to Caddy)
     volumes:
       - /opt/gethomepage/config:/app/config
       - /media:/media:ro  # for the disk usage stat in widgets.yaml

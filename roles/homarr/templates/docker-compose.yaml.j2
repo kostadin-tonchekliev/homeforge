@@ -28,8 +28,8 @@ services:
       REDIS_USERNAME: homarr
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_DATABASE_INDEX: {{ homeserver_redis_dbs['homarr'] }}
-      # Served by Caddy at https://homarr.{{ homeserver_domain }}; Caddy's address is trusted for the client IP
-      BASE_URL: https://homarr.{{ homeserver_domain }}
+      # Served by Caddy at https://{{ homeserver_domain }}; Caddy's address is trusted for the client IP
+      BASE_URL: https://{{ homeserver_domain }}
       HOMARR_TRUSTED_PROXIES: {{ homeserver_caddy_ip }}
       # Container status and the Docker page, via the read-only socket proxy below
       DOCKER_HOSTNAMES: homarr-dockerproxy
